@@ -90,12 +90,35 @@ jobs:
             libnss3-dev \
             libasound2-dev
 
+      - name: Install build dependencies
+        working-directory: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..5}; do
+            npm ci && break
+            if [ "$i" -eq 5 ]; then
+              echo "::error::Build dependency installation failed after 5 attempts"
+              exit 1
+            fi
+            echo "Build dependency installation failed on attempt $i; retrying..."
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install root dependencies
         shell: bash
         run: |
           set -euo pipefail
           source ./build/azure-pipelines/linux/setup-env.sh
-          npm ci
+          for i in {1..5}; do
+            npm ci && break
+            if [ "$i" -eq 5 ]; then
+              echo "::error::Root dependency installation failed after 5 attempts"
+              exit 1
+            fi
+            echo "Root dependency installation failed on attempt $i; retrying..."
+          done
         env:
           npm_config_arch: x64
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

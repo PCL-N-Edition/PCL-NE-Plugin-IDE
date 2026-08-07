@@ -69,7 +69,7 @@
 		},
 		{
 			"id": "hc-light",
-			"label": "Dark High Contrast",
+			"label": "Light High Contrast",
 			"themeId": "Default High Contrast Light",
 			"type": "hcLight"
 		},

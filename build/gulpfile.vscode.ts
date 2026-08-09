@@ -293,12 +293,13 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			.pipe(rename(function (path) { path.dirname = path.dirname!.replace(new RegExp('^' + out), 'out'); }))
 			.pipe(util.setExecutableBit(['**/*.sh']));
 
-		const platformSpecificBuiltInExtensionsExclusions = product.builtInExtensions.filter(ext => {
-			if (!(ext as { platforms?: string[] }).platforms) {
+		const builtInExtensions = (product.builtInExtensions ?? []) as Array<{ name: string; platforms?: string[] }>;
+		const platformSpecificBuiltInExtensionsExclusions = builtInExtensions.filter(ext => {
+			if (!ext.platforms) {
 				return false;
 			}
 
-			const set = new Set((ext as { platforms?: string[] }).platforms);
+			const set = new Set(ext.platforms);
 			return !set.has(platform);
 		}).map(ext => `!.build/extensions/${ext.name}/**`);
 

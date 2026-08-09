@@ -1,0 +1,23 @@
+{
+	"schemaVersion": "1.0",
+	"id": "com.pcln.hello-pcl",
+	"name": "Hello PCL",
+	"version": "0.1.0",
+	"sdkVersion": "0.1.0",
+	"description": "Minimal Community Edition plugin fixture for build/package/validate e2e coverage.",
+	"author": "PCL-N Community",
+	"license": "MIT",
+	"entry": {
+		"assembly": "bin/HelloPcl.dll",
+		"type": "HelloPcl.PluginEntry"
+	},
+	"permissions": [
+		"ui"
+	],
+	"localization": {
+		"defaultCulture": "en",
+		"cultures": [
+			"en"
+		]
+	}
+}

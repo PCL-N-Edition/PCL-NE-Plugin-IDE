@@ -315,8 +315,70 @@ const nativeExtensions = [
 	'microsoft-authentication',
 ];
 
+/**
+ * Extensions that exist in the tree for upstream sync / tests but are not
+ * shipped in Community Edition product builds.
+ *
+ * Policy: stop packaging first (this list), delete sources later when sync
+ * cost and dependencies are well understood. See docs/PCL-TRIM-LIST.md.
+ */
 const excludedExtensions = [
+	// Removed product features
 	'copilot',
+	// Language packs not required for PCL-N C# plugin development
+	'bat',
+	'clojure',
+	'coffeescript',
+	'cpp',
+	'dart',
+	'docker',
+	'fsharp',
+	'go',
+	'groovy',
+	'handlebars',
+	'hlsl',
+	'java',
+	'julia',
+	'latex',
+	'less',
+	'lua',
+	'make',
+	'objective-c',
+	'perl',
+	'php',
+	'php-language-features',
+	'pug',
+	'python',
+	'r',
+	'razor',
+	'restructuredtext',
+	'ruby',
+	'rust',
+	'scss',
+	'shaderlab',
+	'sql',
+	'swift',
+	'vb',
+	// Notebooks and agent-adjacent local extensions
+	'ipynb',
+	'notebook-renderers',
+	'mermaid-markdown-features',
+	'prompt-basics',
+	// Node task runners rarely used for PCL-N plugin workflows
+	'grunt',
+	'gulp',
+	'jake',
+	// Tunnel forwarding is not part of Community product surface
+	'tunnel-forwarding',
+	// Legacy optional color themes (new UI only: 2026 + HC + solarized kept via theme-defaults)
+	'theme-abyss',
+	'theme-kimbie-dark',
+	'theme-monokai',
+	'theme-monokai-dimmed',
+	'theme-quietlight',
+	'theme-red',
+	'theme-tomorrow-night-blue',
+	// Test-only
 	'vscode-api-tests',
 	'vscode-colorize-tests',
 	'vscode-colorize-perf-tests',
@@ -465,30 +527,11 @@ function doPackageLocalExtensionsStream(forWeb: boolean, disableMangle: boolean,
 }
 
 /**
- * Package the built-in copilot extension specifically.
- * This is used by non-CI local builds where copilot is not downloaded as a VSIX
- * but must be compiled from source and included in the build.
+ * Community Edition does not ship the Copilot extension. Kept as an empty
+ * stream so any residual task references fail closed without packaging content.
  */
-export function packageCopilotExtensionStream(disableMangle: boolean): Stream {
-	const extensionPath = path.join(root, 'extensions', 'copilot');
-	if (!fs.existsSync(extensionPath)) {
-		return es.readArray([]);
-	}
-
-	const localExtensionsStream = minifyExtensionResources(
-		fromLocal(extensionPath, false, disableMangle)
-			.pipe(rename(p => p.dirname = `extensions/copilot/${p.dirname}`))
-	);
-
-	const productionDependencies = getProductionDependencies('extensions/copilot');
-	const dependenciesSrc = productionDependencies.map(d => path.relative(root, d)).map(d => [`${d}/**`, `!${d}/**/{test,tests}/**`]).flat();
-
-	return es.merge(
-		localExtensionsStream,
-		gulp.src(dependenciesSrc, { base: '.' })
-			.pipe(util2.cleanNodeModules(path.join(root, 'build', '.moduleignore')))
-			.pipe(util2.cleanNodeModules(path.join(root, 'build', `.moduleignore.${process.platform}`)))
-	).pipe(util2.setExecutableBit(['**/*.sh']));
+export function packageCopilotExtensionStream(_disableMangle: boolean): Stream {
+	return es.readArray([]);
 }
 
 export function packageMarketplaceExtensionsStream(forWeb: boolean): Stream {

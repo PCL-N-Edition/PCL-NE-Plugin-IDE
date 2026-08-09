@@ -30,6 +30,8 @@ Shared protocols, concepts, interfaces, components, or upstream Code - OSS code 
 
 See [`docs/PCL-COMMUNITY-EDITION.md`](docs/PCL-COMMUNITY-EDITION.md) for the formal repository boundary.
 
+See [`docs/PCL-COMMUNITY-PLAN.md`](docs/PCL-COMMUNITY-PLAN.md) for the Community product architecture, current coverage, delivery milestones, and acceptance gates.
+
 ## Community Edition goals
 
 Community Edition is intended to provide a complete baseline workflow for normal third-party PCL-N plugin development. Planned Community-facing capabilities include:
@@ -56,15 +58,35 @@ This project is **not** Microsoft Visual Studio Code and is not distributed unde
 
 ## Development status
 
-PCL NE Plugin IDE is under active development. The repository currently retains substantial upstream Code - OSS code while PCL-N-specific product layers are introduced and unnecessary distribution components are evaluated for exclusion or removal.
+**Current milestone delivery: M0 + M1 (Community Alpha).**
 
-The preferred trimming policy is:
+| Milestone | Status | Summary |
+|---|---|---|
+| **M0** Fork baseline | Done | Product identity, upstream tracking, trim list, Community CI, security policy |
+| **M1** Plugin project alpha | Done | Create project → environment check → build → development sign → package → validate |
+| M2 Runtime & debug | Planned | Sidecar Standard, install/reload, DAP |
+| M3 Authoring | Planned | Manifest designer, AXAML |
+| M4 Community 1.0 | Planned | Registry, installers, update channel |
+
+### M1 quick start (plugin pipeline)
+
+```bash
+# Windows
+pwsh -File scripts/pcl-m1-e2e.ps1
+
+# macOS / Linux
+bash scripts/pcl-m1-e2e.sh
+```
+
+In the IDE (after building from sources), use the **PCL** command palette entries from the `pcl-community` built-in extension.
+
+### Trimming policy
 
 1. disable or stop shipping an unwanted feature first;
 2. retain upstream source temporarily when that materially reduces upstream-sync cost;
 3. physically remove code only after its dependency and maintenance impact is understood.
 
-The objective is a focused Community distribution without creating an unnecessarily difficult-to-maintain fork.
+See [`docs/PCL-TRIM-LIST.md`](docs/PCL-TRIM-LIST.md). Copilot product packaging and the `extensions/copilot` tree are removed. Chat/Agent host sources may remain for upstream-sync cost control and are **not** productized (no `defaultChatAgent`).
 
 ## Contributing
 

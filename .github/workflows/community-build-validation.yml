@@ -1,6 +1,9 @@
 name: Community Build Validation
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -27,14 +30,17 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Verify Community default build loop
+      - name: Verify Community product and packaging boundaries
         shell: bash
         run: |
           set -euo pipefail
 
           node <<'NODE'
           const fs = require('node:fs');
+          const path = require('node:path');
+
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const product = JSON.parse(fs.readFileSync('product.json', 'utf8'));
           const scripts = pkg.scripts ?? {};
           const forbidden = [];
 
@@ -50,13 +56,87 @@ jobs:
             process.exit(1);
           }
 
-          console.log('Community default build/watch scripts contain no Copilot-specific entrypoints.');
+          if (fs.existsSync('extensions/copilot/package.json')) {
+            console.error('extensions/copilot must not be present in Community Edition.');
+            process.exit(1);
+          }
+
+          if (!fs.existsSync('extensions/pcl-community/package.json')) {
+            console.error('extensions/pcl-community is required for Community Edition M1.');
+            process.exit(1);
+          }
+
+          const requiredProduct = ['nameShort', 'nameLong', 'applicationName', 'urlProtocol', 'dataFolderName'];
+          for (const key of requiredProduct) {
+            if (!product[key]) {
+              console.error(`product.json missing required key: ${key}`);
+              process.exit(1);
+            }
+          }
+
+          if (!/community/i.test(String(product.nameLong)) && !/community/i.test(String(product.applicationName))) {
+            console.error('product.json does not identify Community Edition.');
+            process.exit(1);
+          }
+
+          if (product.defaultChatAgent) {
+            console.error('product.json must not configure defaultChatAgent / Copilot agent for Community Edition.');
+            process.exit(1);
+          }
+
+          if (product.enableTelemetry === true) {
+            console.error('product.json must not enable telemetry for Community Edition default product config.');
+            process.exit(1);
+          }
+
+          // Ensure packaging exclude list still blocks copilot and includes pcl-community sources only via local packaging
+          const extensionsTs = fs.readFileSync('build/lib/extensions.ts', 'utf8');
+          if (!/excludedExtensions[\s\S]*'copilot'/.test(extensionsTs)) {
+            console.error("build/lib/extensions.ts must exclude 'copilot' from packaging.");
+            process.exit(1);
+          }
+
+          console.log('Community product and packaging boundary checks passed.');
           NODE
+
+  m1-plugin-pipeline:
+    name: M1 Hello PCL pipeline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run M1 e2e (build → sign → package → validate)
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/pcl-m1-e2e.sh
+          ./scripts/pcl-m1-e2e.sh
+
+      - name: Upload Hello PCL package artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hello-pcl-package
+          path: |
+            fixtures/hello-pcl/dist/*.pnp
+            fixtures/hello-pcl/dist/**/*
+          if-no-files-found: error
 
   linux-build:
     name: Linux compile and typecheck
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       NPM_ARCH: x64
       VSCODE_ARCH: x64
@@ -128,6 +208,9 @@ jobs:
 
       - name: Compile Community Edition
         run: npm run compile
+
+      - name: Compile pcl-community extension
+        run: npm run gulp compile-extension:pcl-community
 
       - name: Validate architectural layers
         run: npm run valid-layers-check

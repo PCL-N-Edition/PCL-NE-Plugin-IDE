@@ -50,35 +50,34 @@
 			"type": "dark"
 		},
 		{
-			"id": "hc-dark",
-			"label": "Dark High Contrast",
-			"themeId": "Default High Contrast",
-			"type": "hcDark"
-		},
-		{
-			"id": "solarized-dark",
-			"label": "Solarized Dark",
-			"themeId": "Solarized Dark",
-			"type": "dark"
-		},
-		{
 			"id": "light-2026",
 			"label": "Light 2026",
 			"themeId": "Light 2026",
 			"type": "light"
 		},
 		{
+			"id": "hc-dark",
+			"label": "Dark High Contrast",
+			"themeId": "Default High Contrast",
+			"type": "hcDark"
+		},
+		{
 			"id": "hc-light",
 			"label": "Light High Contrast",
 			"themeId": "Default High Contrast Light",
 			"type": "hcLight"
-		},
-		{
-			"id": "solarized-light",
-			"label": "Solarized Light",
-			"themeId": "Solarized Light",
-			"type": "light"
 		}
 	],
+	"linkProtectionTrustedDomains": [
+		"https://github.com/PCL-N-Edition/*",
+		"https://pcln.top/*"
+	],
+	"removeTelemetryMachineId": true,
+	"enabledTelemetryLevels": {
+		"error": false,
+		"usage": false
+	},
+	"enableTelemetry": false,
+	"showTelemetryOptOut": false,
 	"sessionsWindowAllowedExtensions": []
 }

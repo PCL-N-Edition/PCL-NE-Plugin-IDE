@@ -158,6 +158,8 @@ Community Edition 应当是独立可用的基础开发环境，不以编辑器�
 
 目标：让 PCL-N 特有文件的开发体验达到可日常使用水平。
 
+AXAML Designer 的正式架构基线见 [PCL Developer Studio — AXAML Designer 架构补充说明](../PCL-Developer-Studio-AXAML-Designer-Architecture-Supplement.md)。实现必须保持 AXAML 单一真源、`TextEdit[]` 回写、Designer Host 与可销毁 Preview Worker 分离，以及用户程序集只进入 Worker 的边界。
+
 - Manifest Designer 与源码双向同步；
 - AXAML 语义补全、诊断、预览和设计器；
 - 资源、主题和本地化编辑器；

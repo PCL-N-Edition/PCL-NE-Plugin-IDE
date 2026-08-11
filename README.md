@@ -67,7 +67,7 @@ This project is **not** Microsoft Visual Studio Code and is not distributed unde
 | **M0** Fork baseline | Done | Community identity, modern-only UI, allowlisted product surface, CI and security boundary |
 | **M1** Plugin project alpha | Done | Create/open project → Roslyn → build → development sign → package → validate |
 | M2 Runtime & debug | Planned | Sidecar Standard, install/reload, DAP |
-| M3 Authoring | Planned | Manifest designer, AXAML |
+| M3 Authoring | Planned | Manifest designer and [AXAML Designer](PCL-Developer-Studio-AXAML-Designer-Architecture-Supplement.md) |
 | M4 Community 1.0 | Planned | Registry, installers, update channel |
 
 ### M1 quick start (plugin pipeline)

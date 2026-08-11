@@ -1,0 +1,9 @@
+<Border xmlns="https://github.com/avaloniaui"
+        Padding="12"
+        CornerRadius="8">
+  <StackPanel Spacing="6">
+    <TextBlock FontWeight="SemiBold" Text="Hello PCL" />
+    <TextBlock Text="Community Edition fixture panel loaded from declarative AXAML." TextWrapping="Wrap" />
+    <Button Content="Say hello" Command="{Binding Commands[com.pcln.hello-pcl.say-hello]}" />
+  </StackPanel>
+</Border>

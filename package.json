@@ -1,9 +1,9 @@
 {
-  "name": "code-oss-dev",
+  "name": "pcl-ne-plugin-ide-community",
   "version": "1.133.0",
   "distro": "0a2adcd7a64dfe443b6122097cd88f5958c22147",
   "author": {
-    "name": "Microsoft Corporation"
+    "name": "PCL-N Edition Contributors"
   },
   "license": "MIT",
   "main": "./out/main.js",
@@ -89,12 +89,13 @@
     "update-build-ts-version": "npm install -D typescript@npm:@typescript/typescript6@^6.0.2 && npm install -D @typescript/native@npm:typescript@next && (cd build && npm run typecheck)",
     "install-local-component-explorer": "npm install ../vscode-packages/js-component-explorer/dist/vscode-component-explorer-0.1.0.tgz ../vscode-packages/js-component-explorer/dist/vscode-component-explorer-cli-0.1.0.tgz --no-save && cd build/rspack && npm install ../../../vscode-packages/js-component-explorer/dist/vscode-component-explorer-webpack-plugin-0.1.0.tgz --no-save && cd ../vite && npm install ../../../vscode-packages/js-component-explorer/dist/vscode-component-explorer-vite-plugin-0.1.0.tgz --no-save",
     "symlink-local-component-explorer": "npm install ../vscode-packages/js-component-explorer/packages/explorer ../vscode-packages/js-component-explorer/packages/cli --no-save && cd build/rspack && npm install ../../../vscode-packages/js-component-explorer/packages/webpack-plugin ../../../vscode-packages/js-component-explorer/packages/explorer --no-save && cd ../vite && npm install ../../../vscode-packages/js-component-explorer/packages/vite-plugin ../../../vscode-packages/js-component-explorer/packages/explorer --no-save",
-    "install-latest-component-explorer": "npm install @vscode/component-explorer@next @vscode/component-explorer-cli@next && cd build/rspack && npm install @vscode/component-explorer-webpack-plugin@next @vscode/component-explorer@next && cd ../vite && npm install @vscode/component-explorer-vite-plugin@next @vscode/component-explorer@next"
+    "install-latest-component-explorer": "npm install @vscode/component-explorer@next @vscode/component-explorer-cli@next && cd build/rspack && npm install @vscode/component-explorer-webpack-plugin@next @vscode/component-explorer@next && cd ../vite && npm install @vscode/component-explorer-vite-plugin@next @vscode/component-explorer@next",
+    "pcl:m1-e2e": "pwsh -NoProfile -File scripts/pcl-m1-e2e.ps1",
+    "pcl:m1-e2e:win": "pwsh -NoProfile -File scripts/pcl-m1-e2e.ps1",
+    "pcl:m1-e2e:unix": "bash scripts/pcl-m1-e2e.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
-    "@github/copilot": "1.0.79-6",
-    "@github/copilot-sdk": "1.0.9",
     "@microsoft/1ds-core-js": "^3.2.13",
     "@microsoft/1ds-post-js": "^3.2.13",
     "@microsoft/dev-tunnels-connections": "^1.3.41",
@@ -106,7 +107,6 @@
     "@parcel/watcher": "^2.5.6",
     "@types/semver": "^7.5.8",
     "@vscode/codicons": "^0.0.46-30",
-    "@vscode/copilot-api": "^0.5.1",
     "@vscode/deviceid": "^0.1.1",
     "@vscode/diff": "0.0.2-7",
     "@vscode/fs-copyfile": "2.0.0",
@@ -164,6 +164,8 @@
   },
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.220",
+    "@github/copilot": "1.0.79-6",
+    "@github/copilot-sdk": "1.0.9",
     "@openai/codex": "0.146.0",
     "@playwright/cli": "^0.1.9",
     "@playwright/test": "^1.61.1",
@@ -185,6 +187,7 @@
     "@types/ssh2": "^1.15.4",
     "@types/trusted-types": "^2.0.7",
     "@types/vscode-notebook-renderer": "^1.72.0",
+    "@vscode/copilot-api": "^0.5.1",
     "@types/wicg-file-system-access": "^2023.10.7",
     "@types/windows-foreground-love": "^0.3.0",
     "@types/winreg": "^1.2.30",

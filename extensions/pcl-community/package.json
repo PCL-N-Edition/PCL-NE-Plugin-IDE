@@ -1,0 +1,260 @@
+{
+	"name": "pcl-community",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "0.2.0",
+	"publisher": "pcln",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"categories": [
+		"Other",
+		"Programming Languages"
+	],
+	"keywords": [
+		"pcl-n",
+		"plugin",
+		"pnp",
+		"nplug",
+		"community"
+	],
+	"activationEvents": [
+		"onStartupFinished",
+		"onLanguage:csharp",
+		"onCommand:pcl.community.openProject",
+		"onCommand:pcl.community.createProject",
+		"onCommand:pcl.community.newFile",
+		"onCommand:pcl.community.checkEnvironment",
+		"onCommand:pcl.community.installCsharpLanguageServer",
+		"onCommand:pcl.community.restore",
+		"onCommand:pcl.community.build",
+		"onCommand:pcl.community.package",
+		"onCommand:pcl.community.validate",
+		"onCommand:pcl.community.developmentSign",
+		"workspaceContains:**/*.nplug",
+		"workspaceContains:**/plugin.json"
+	],
+	"main": "./out/extension",
+	"icon": "media/icon.png",
+	"capabilities": {
+		"virtualWorkspaces": false,
+		"untrustedWorkspaces": {
+			"supported": false,
+			"description": "%untrustedWorkspaces.description%"
+		}
+	},
+	"contributes": {
+		"commands": [
+			{
+				"command": "pcl.community.openProject",
+				"title": "%command.openProject%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.createProject",
+				"title": "%command.createProject%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.newFile",
+				"title": "%command.newFile%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.checkEnvironment",
+				"title": "%command.checkEnvironment%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.installCsharpLanguageServer",
+				"title": "%command.installCsharpLanguageServer%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.restore",
+				"title": "%command.restore%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.build",
+				"title": "%command.build%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.package",
+				"title": "%command.package%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.validate",
+				"title": "%command.validate%",
+				"category": "PCL"
+			},
+			{
+				"command": "pcl.community.developmentSign",
+				"title": "%command.developmentSign%",
+				"category": "PCL"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "pcl.community.openProject"
+				},
+				{
+					"command": "pcl.community.createProject"
+				},
+				{
+					"command": "pcl.community.newFile"
+				},
+				{
+					"command": "pcl.community.checkEnvironment"
+				},
+				{
+					"command": "pcl.community.installCsharpLanguageServer"
+				},
+				{
+					"command": "pcl.community.restore",
+					"when": "pcl.community.isPluginWorkspace"
+				},
+				{
+					"command": "pcl.community.build",
+					"when": "pcl.community.isPluginWorkspace"
+				},
+				{
+					"command": "pcl.community.package",
+					"when": "pcl.community.isPluginWorkspace"
+				},
+				{
+					"command": "pcl.community.validate",
+					"when": "pcl.community.isPluginWorkspace"
+				},
+				{
+					"command": "pcl.community.developmentSign",
+					"when": "pcl.community.isPluginWorkspace"
+				}
+			]
+		},
+		"jsonValidation": [
+			{
+				"fileMatch": [
+					"plugin.json",
+					"**/plugin.json"
+				],
+				"url": "./schemas/plugin.schema.json"
+			},
+			{
+				"fileMatch": [
+					"*.nplug",
+					"**/*.nplug"
+				],
+				"url": "./schemas/nplug.schema.json"
+			}
+		],
+		"languages": [
+			{
+				"id": "json",
+				"filenames": [
+					"plugin.json"
+				],
+				"extensions": [
+					".nplug"
+				]
+			}
+		],
+		"configurationDefaults": {
+			"chat.disableAIFeatures": true,
+			"files.exclude": {
+				"**/bin": true,
+				"**/dist": true,
+				"**/obj": true,
+				"**/*.csproj": true,
+				"**/*.nplug": true,
+				"**/*.slnx": true,
+				"**/*.config": true
+			}
+		},
+		"taskDefinitions": [
+			{
+				"type": "pcl",
+				"required": [
+					"task"
+				],
+				"properties": {
+					"task": {
+						"type": "string",
+						"enum": [
+							"restore",
+							"build",
+							"package",
+							"validate",
+							"sign"
+						],
+						"description": "%task.task.description%"
+					}
+				}
+			}
+		],
+		"problemMatchers": [
+			{
+				"name": "pcl-analyzer",
+				"owner": "pcl",
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^(.*)\\((\\d+),(\\d+)\\):\\s+(error|warning|info)\\s+(PNPSDK\\d+|[A-Z]{2,}\\d+):\\s+(.*?)(?:\\s+\\[.*\\])?$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"severity": 4,
+					"code": 5,
+					"message": 6
+				}
+			}
+		],
+		"configuration": {
+			"title": "PCL Community",
+			"properties": {
+				"pcl.community.sdkVersion": {
+					"type": "string",
+					"default": "0.2.5",
+					"description": "%config.sdkVersion%"
+				},
+				"pcl.community.dotnetPath": {
+					"type": "string",
+					"default": "dotnet",
+					"description": "%config.dotnetPath%"
+				},
+				"pcl.community.csharpLsPath": {
+					"type": "string",
+					"default": "",
+					"description": "%config.csharpLsPath%"
+				},
+				"pcl.community.csharpLsAutoInstall": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.csharpLsAutoInstall%"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"compile": "gulp compile-extension:pcl-community",
+		"watch": "gulp watch-extension:pcl-community"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^10.0.0-next.22",
+		"yauzl": "^3.2.0"
+	},
+	"devDependencies": {
+		"@types/node": "24.x",
+		"@types/yauzl": "^2.10.3"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/PCL-N-Edition/PCL-NE-Plugin-IDE.git"
+	}
+}

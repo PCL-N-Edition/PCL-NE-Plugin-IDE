@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pcln.top/schemas/nplug.schema.json",
+  "title": "PCL-N Plugin Project (.nplug)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "id", "name", "version", "sdkVersion", "project", "entry"],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0",
+      "description": "NPLUG schema version."
+    },
+    "kind": {
+      "const": "pcl-plugin",
+      "description": "Document kind."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(\\.[a-z0-9\\-]+)+$",
+      "description": "Reverse-DNS plugin id."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9.-]+)?$"
+    },
+    "sdkVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9.-]+)?$"
+    },
+    "author": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string",
+      "description": "Relative path to the .csproj file."
+    },
+    "solution": {
+      "type": "string",
+      "description": "Relative path to the .slnx solution file."
+    },
+    "manifest": {
+      "type": "string",
+      "description": "Relative path to the Public PNPSDK plugin.json manifest."
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assembly", "type"],
+      "properties": {
+        "assembly": { "type": "string" },
+        "type": { "type": "string" }
+      }
+    }
+  }
+}

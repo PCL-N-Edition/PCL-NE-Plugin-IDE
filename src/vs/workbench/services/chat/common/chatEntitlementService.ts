@@ -456,7 +456,12 @@ export class ChatEntitlementService extends Disposable implements IChatEntitleme
 		}
 
 		if (!productService.defaultChatAgent) {
-			return; // we need a default chat agent configured going forward from here
+			// Community Edition: no GitHub Copilot product surface. Treat setup as
+			// already complete so status/dashboard never prompt for Copilot sign-in.
+			// Agent mode is provided by OpenCode (auto-installed if missing).
+			ChatEntitlementContextKeys.Setup.completed.bindTo(this.contextKeyService).set(true);
+			ChatEntitlementContextKeys.Setup.installed.bindTo(this.contextKeyService).set(true);
+			return;
 		}
 
 		const context = this.context = new Lazy(() => this._register(instantiationService.createInstance(ChatEntitlementContext)));

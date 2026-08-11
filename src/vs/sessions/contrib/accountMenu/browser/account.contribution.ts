@@ -55,6 +55,7 @@ import { language } from '../../../../base/common/platform.js';
 import { AgentHostCodexAgentEnabledSettingId } from '../../../../platform/agentHost/common/agentService.js';
 import { ChatAIDisabledSettingId } from '../../../../platform/chat/common/chatSettings.js';
 import { CHAT_SETUP_ACTION_ID } from '../../../../workbench/contrib/chat/browser/actions/chatActions.js';
+import product from '../../../../platform/product/common/product.js';
 
 // --- Account Menu Items --- //
 const AccountMenu = Menus.AccountMenu;
@@ -68,6 +69,8 @@ const SIGN_OUT_ACTION_ID = 'workbench.action.agenticSignOut';
 const SIGN_IN_ACTION_ID = 'workbench.action.agenticSignIn';
 const accountDateFormatter = safeIntl.DateTimeFormat(language, { month: 'short', day: 'numeric' });
 const accountTimeFormatter = safeIntl.DateTimeFormat(language, { hour: 'numeric', minute: 'numeric' });
+/** Community Edition has no account-backed AI product surface. */
+const hasDefaultChatAgent = !!product.defaultChatAgent;
 
 export function shouldShowAccountPanelSummary(state: Pick<IAccountTitleBarState, 'source' | 'kind'>, hasCopilotDashboard: boolean, isAccountLoading: boolean): boolean {
 	return !hasCopilotDashboard && !isAccountLoading && !(state.source === 'copilot' && state.kind === 'prominent');
@@ -78,23 +81,24 @@ registerUpdateTitleBarMenuPlacement(Menus.TitleBarUpdate, {
 	when: ContextKeyExpr.and(IsAuxiliaryWindowContext.toNegated(), SessionsWelcomeVisibleContext.toNegated()),
 });
 
-// Sign In (shown when signed out)
+// Sign In (shown when signed out in products that ship an account-backed agent).
 registerAction2(class extends Action2 {
 	constructor() {
 		super({
 			id: 'workbench.action.agenticSignIn',
 			title: localize2('signIn', "Sign in to use GitHub Copilot"),
 			icon: Codicon.signIn,
-			menu: {
+			menu: hasDefaultChatAgent ? {
 				id: AccountMenu,
 				when: ContextKeyExpr.notEquals('defaultAccountStatus', 'available'),
 				group: '1_account',
 				order: 1,
-			}
+			} : undefined
 		});
 	}
 	async run(accessor: ServicesAccessor): Promise<void> {
-		await accessor.get(ICommandService).executeCommand(CHAT_SETUP_ACTION_ID);
+		const commandService = accessor.get(ICommandService);
+		await commandService.executeCommand(CHAT_SETUP_ACTION_ID);
 	}
 });
 
@@ -105,12 +109,12 @@ registerAction2(class extends Action2 {
 			id: 'workbench.action.agenticSignOut',
 			title: localize2('signOut', 'Sign Out'),
 			icon: Codicon.signOut,
-			menu: {
+			menu: hasDefaultChatAgent ? {
 				id: AccountMenu,
 				when: ContextKeyExpr.equals('defaultAccountStatus', 'available'),
 				group: '1_account',
 				order: 1,
-			}
+			} : undefined
 		});
 	}
 	async run(accessor: ServicesAccessor): Promise<void> {

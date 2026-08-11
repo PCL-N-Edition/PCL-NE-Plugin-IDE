@@ -558,9 +558,7 @@ export class XtermTerminal extends Disposable implements IXtermTerminal, IDetach
 	 * UI Update experiment so it matches the modernized workbench scrollbars.
 	 */
 	get scrollbarWidth(): number {
-		return this._configurationService.getValue<boolean>(LayoutSettings.MODERN_UI) === true
-			? TerminalScrollbarWidth.ModernUI
-			: TerminalScrollbarWidth.Default;
+		return TerminalScrollbarWidth.ModernUI;
 	}
 
 	/**

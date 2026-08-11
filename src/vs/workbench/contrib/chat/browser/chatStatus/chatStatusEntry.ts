@@ -195,7 +195,8 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 		this._register(this.editorService.onDidActiveEditorChange(() => this.onDidActiveEditorChange()));
 
 		this._register(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(product.defaultChatAgent?.completionsEnablementSetting) || e.affectsConfiguration(ChatConfiguration.TitleBarSignInEnabled)) {
+			const completionsSetting = product.defaultChatAgent?.completionsEnablementSetting;
+			if ((completionsSetting && e.affectsConfiguration(completionsSetting)) || e.affectsConfiguration(ChatConfiguration.TitleBarSignInEnabled)) {
 				this.update();
 			}
 		}));
@@ -330,8 +331,14 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 	//#endregion
 
 	private getEntryProps(): IStatusbarEntry {
-		let text = '$(copilot)';
-		let ariaLabel = localize('chatStatusAria', "Copilot status");
+		const communityOpenCode = !product.defaultChatAgent;
+		const statusName = communityOpenCode
+			? localize('openCodeStatus', "OpenCode Status")
+			: localize('chatStatus', "Copilot Status");
+		let text = communityOpenCode ? '$(robot)' : '$(copilot)';
+		let ariaLabel = communityOpenCode
+			? localize('openCodeStatusAria', "OpenCode agent status")
+			: localize('chatStatusAria', "Copilot status");
 		let kind: StatusbarEntryKind | undefined;
 
 		if (isNewUser(this.chatEntitlementService)) {
@@ -351,18 +358,21 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 
 			// Disabled
 			if (this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted) {
-				text = '$(copilot-unavailable)';
-				ariaLabel = localize('copilotDisabledStatus', "Copilot disabled");
+				text = communityOpenCode ? '$(robot)' : '$(copilot-unavailable)';
+				ariaLabel = communityOpenCode
+					? localize('openCodeDisabledStatus', "OpenCode agent disabled")
+					: localize('copilotDisabledStatus', "Copilot disabled");
 			}
 
 			// Signed out — keep showing Sign-in affordance even when BYOK models are present
 			// so air-gapped users can still authenticate to unlock the full Copilot experience.
-			else if (this.chatEntitlementService.entitlement === ChatEntitlement.Unknown) {
+			// Community Edition has no Copilot product surface; skip sign-in affordance.
+			else if (!communityOpenCode && this.chatEntitlementService.entitlement === ChatEntitlement.Unknown) {
 				return this.getSetupEntryProps();
 			}
 
 			// Quota Exceeded (all tracked plans share the premium chat quota)
-			else if (isTrackedEntitlement(this.chatEntitlementService.entitlement) && isQuotaBlocked(quotas)) {
+			else if (!communityOpenCode && isTrackedEntitlement(this.chatEntitlementService.entitlement) && isQuotaBlocked(quotas)) {
 				const quotaWarning = localize('chatQuotaExceededStatus', "Quota reached");
 				text = `$(copilot-warning) ${quotaWarning}`;
 				ariaLabel = quotaWarning;
@@ -370,7 +380,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 			}
 
 			// Copilot Resumed (limit reset after the user was previously blocked)
-			else if (this.quotaResumeState === 'resumed') {
+			else if (!communityOpenCode && this.quotaResumeState === 'resumed') {
 				const resumedLabel = localize('chatResumedStatus', "Copilot Resumed");
 				text = `$(copilot) ${resumedLabel}`;
 				ariaLabel = resumedLabel;
@@ -379,19 +389,19 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 
 			// Completions Disabled
 			else if (this.editorService.activeTextEditorLanguageId && !isCompletionsEnabled(this.configurationService, this.editorService.activeTextEditorLanguageId)) {
-				text = '$(copilot-unavailable)';
+				text = communityOpenCode ? '$(robot)' : '$(copilot-unavailable)';
 				ariaLabel = localize('completionsDisabledStatus', "Inline suggestions disabled");
 			}
 
 			// Completions Snoozed
 			else if (this.completionsService.isSnoozing()) {
-				text = '$(copilot-snooze)';
+				text = communityOpenCode ? '$(robot)' : '$(copilot-snooze)';
 				ariaLabel = localize('completionsSnoozedStatus', "Inline suggestions snoozed");
 			}
 		}
 
 		const baseResult = {
-			name: localize('chatStatus', "Copilot Status"),
+			name: statusName,
 			text,
 			ariaLabel,
 			command: ShowTooltipCommand,
@@ -405,13 +415,27 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 	}
 
 	private getSetupEntryProps(): IStatusbarEntry {
+		const communityOpenCode = !product.defaultChatAgent;
 		const showSignInLabel = !this.isSignInTitleBarAffordanceVisible();
-		const signInLabel = localize('signIn', "Sign In");
+		const signInLabel = communityOpenCode
+			? localize('openOpenCode', "OpenCode")
+			: localize('signIn', "Sign In");
+		const icon = communityOpenCode ? '$(robot)' : '$(copilot)';
 		return {
-			name: localize('chatStatus', "Copilot Status"),
-			text: showSignInLabel ? `$(copilot) ${signInLabel}` : '$(copilot)',
-			ariaLabel: showSignInLabel ? signInLabel : localize('chatStatusAria', "Copilot status"),
-			command: CHAT_SETUP_ACTION_ID,
+			name: communityOpenCode
+				? localize('openCodeStatus', "OpenCode Status")
+				: localize('chatStatus', "Copilot Status"),
+			text: showSignInLabel ? `${icon} ${signInLabel}` : icon,
+			ariaLabel: showSignInLabel
+				? signInLabel
+				: (communityOpenCode
+					? localize('openCodeStatusAria', "OpenCode agent status")
+					: localize('chatStatusAria', "Copilot status")),
+			// Community: open OpenCode agent session (CLI auto-installs if missing).
+			// Product builds with Copilot: keep the historical setup action.
+			command: communityOpenCode
+				? 'workbench.action.chat.openNewSessionSidebar.agent-host-opencode'
+				: CHAT_SETUP_ACTION_ID,
 			showInAllWindows: true,
 			kind: undefined,
 			content: this.entryAnchor,

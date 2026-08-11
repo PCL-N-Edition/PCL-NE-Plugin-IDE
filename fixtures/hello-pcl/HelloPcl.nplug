@@ -1,0 +1,17 @@
+{
+  "kind": "pcl-plugin",
+  "entry": {
+    "type": "HelloPcl.HelloPlugin",
+    "assembly": "lib/net10.0/HelloPcl.dll"
+  },
+  "id": "com.pcln.hello-pcl",
+  "version": "0.1.0",
+  "project": "HelloPcl.csproj",
+  "schemaVersion": "1.0",
+  "name": "Hello PCL",
+  "manifest": "plugin.json",
+  "sdkVersion": "0.2.5",
+  "description": "Public PNPSDK 0.2.5 Community Edition fixture",
+  "solution": "HelloPcl.slnx",
+  "author": "PCL-N Community"
+}

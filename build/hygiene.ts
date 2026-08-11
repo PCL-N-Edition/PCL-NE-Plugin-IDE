@@ -28,12 +28,17 @@ interface VinylFileWithLines extends VinylFile {
 }
 
 /**
- * Checks that engines.vscode in extensions/copilot/package.json matches ^{version} from the root package.json.
+ * Community Edition no longer ships the Copilot extension. Keep the hook so
+ * hygiene callers remain stable; always succeed when the package is absent.
  * Returns an error message if mismatched, or undefined if OK.
  */
 export function checkCopilotEnginesVersion(repoRoot: string): string | undefined {
+	const copilotPkgPath = path.join(repoRoot, 'extensions/copilot/package.json');
+	if (!fs.existsSync(copilotPkgPath)) {
+		return undefined;
+	}
 	const rootPkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-	const copilotPkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'extensions/copilot/package.json'), 'utf8'));
+	const copilotPkg = JSON.parse(fs.readFileSync(copilotPkgPath, 'utf8'));
 	const expected = `^${rootPkg.version}`;
 	const actual = copilotPkg?.engines?.vscode;
 	if (actual !== expected) {

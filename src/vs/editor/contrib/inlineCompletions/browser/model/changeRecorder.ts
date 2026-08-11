@@ -32,7 +32,7 @@ export class TextModelChangeRecorder extends Disposable {
 			'editor.inlineSuggest.logChangeReason.commandId'
 		));
 
-		const logger = this._loggerService?.createLogger('textModelChanges', { hidden: false, name: 'Text Model Changes Reason' });
+		const logger = this._loggerService?.createLogger('textModelChanges', { hidden: true, name: 'Text Model Changes Reason' });
 
 		const loggingLevel = observableFromEvent(this, logger.onDidChangeLogLevel, () => logger.getLevel());
 

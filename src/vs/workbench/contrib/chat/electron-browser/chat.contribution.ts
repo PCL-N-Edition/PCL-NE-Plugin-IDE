@@ -48,7 +48,6 @@ import { registerExportAgentTracesDbAction } from './actions/exportAgentTracesDb
 import { registerInstallDictationModelAction } from './actions/installDictationModelAction.js';
 import { shouldWarnForSessionShutdown } from './chatLifecycle.js';
 import { HoldToVoiceChatInChatViewAction, InlineVoiceChatAction, KeywordActivationContribution, QuickVoiceChatAction, ReadChatResponseAloud, StartVoiceChatAction, StopListeningAction, StopListeningAndSubmitAction, StopReadAloud, StopReadChatItemAloud, VoiceChatInChatViewAction } from './actions/voiceChatActions.js';
-import { OpenWorkspaceInAgentsWindowAction, OpenWorkspaceInAgentsContribution, OpenAgentsWindowAction, OpenChatSessionInAgentsWindowAction, AgentsHandoffInputTipContribution, ToggleOpenInAgentsWindowTitleBarAction, OpenWorkspaceInAgentsWindowChatTitleAction, OpenWorkspaceInAgentsWindowTitleBarAction } from './agentSessions/agentSessionsActions.js';
 import { NativeBuiltinToolsContribution } from './builtInTools/tools.js';
 import { NativePluginGitCommandService } from './pluginGitCommandService.js';
 
@@ -232,12 +231,6 @@ class ChatLifecycleHandler extends Disposable {
 	}
 }
 
-registerAction2(OpenWorkspaceInAgentsWindowAction);
-registerAction2(OpenWorkspaceInAgentsWindowChatTitleAction);
-registerAction2(OpenWorkspaceInAgentsWindowTitleBarAction);
-registerAction2(ToggleOpenInAgentsWindowTitleBarAction);
-registerAction2(OpenAgentsWindowAction);
-registerAction2(OpenChatSessionInAgentsWindowAction);
 registerAction2(StartVoiceChatAction);
 
 registerAction2(VoiceChatInChatViewAction);
@@ -262,8 +255,6 @@ registerWorkbenchContribution2(NativeBuiltinToolsContribution.ID, NativeBuiltinT
 registerWorkbenchContribution2(ChatCommandLineHandler.ID, ChatCommandLineHandler, WorkbenchPhase.BlockRestore);
 registerWorkbenchContribution2(ChatSuspendThrottlingHandler.ID, ChatSuspendThrottlingHandler, WorkbenchPhase.AfterRestored);
 registerWorkbenchContribution2(ChatLifecycleHandler.ID, ChatLifecycleHandler, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(OpenWorkspaceInAgentsContribution.ID, OpenWorkspaceInAgentsContribution, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(AgentsHandoffInputTipContribution.ID, AgentsHandoffInputTipContribution, WorkbenchPhase.Eventually);
 
 // How long to wait for the agent host to surface an AgentInfo before
 // throwing an error. Long enough for normal startup, short enough to avoid
@@ -271,24 +262,37 @@ registerWorkbenchContribution2(AgentsHandoffInputTipContribution.ID, AgentsHando
 // to start.
 const AGENT_HOST_REGISTRATION_TIMEOUT_MS = 30_000;
 
-function getCopilotAgentInfo(rootState: RootState | Error | undefined): AgentInfo | undefined {
+/**
+ * Preferred agent-host providers for Community Edition static open commands.
+ * OpenCode is first (default); Copilot CLI remains as a legacy fallback when enabled.
+ */
+const PREFERRED_AGENT_HOST_PROVIDERS = ['opencode', 'copilotcli'] as const;
+
+function getPreferredAgentHostInfo(rootState: RootState | Error | undefined): AgentInfo | undefined {
 	if (!rootState || rootState instanceof Error) {
 		return undefined;
 	}
-	return rootState.agents.find(a => a.provider === 'copilotcli');
+	for (const provider of PREFERRED_AGENT_HOST_PROVIDERS) {
+		const found = rootState.agents.find(a => a.provider === provider);
+		if (found) {
+			return found;
+		}
+	}
+	// Any registered host agent is better than failing hard.
+	return rootState.agents[0];
 }
 
 /**
  * Resolve the actual session-content-provider scheme registered by the local
  * agent host. The agent host registers chat sessions under
- * `agent-host-${agent.provider}` (e.g. `agent-host-copilotcli`) only after it
+ * `agent-host-${agent.provider}` (e.g. `agent-host-opencode`) only after it
  * surfaces an `AgentInfo` via `rootState`. This is asynchronous, so the static
- * `agent-host-copilot` umbrella commands need to wait for that registration
- * before opening a session — otherwise we'd build a URI with a scheme that has
- * no content provider and fall back to a fresh local chat session.
+ * umbrella commands need to wait for that registration before opening a session
+ * — otherwise we'd build a URI with a scheme that has no content provider and
+ * fall back to a fresh local chat session.
  */
 async function resolveAgentHostSessionType(agentHostService: IAgentHostService): Promise<string> {
-	const agent = getCopilotAgentInfo(agentHostService.rootState.value);
+	const agent = getPreferredAgentHostInfo(agentHostService.rootState.value);
 	if (agent) {
 		return `agent-host-${agent.provider}`;
 	}
@@ -298,7 +302,7 @@ async function resolveAgentHostSessionType(agentHostService: IAgentHostService):
 	const cts = new CancellationTokenSource();
 	const waitForAgent = new Promise<AgentInfo | undefined>(res => {
 		const sub = agentHostService.rootState.onDidChange(state => {
-			const found = getCopilotAgentInfo(state);
+			const found = getPreferredAgentHostInfo(state);
 			if (found) {
 				sub.dispose();
 				res(found);
@@ -318,7 +322,7 @@ async function resolveAgentHostSessionType(agentHostService: IAgentHostService):
 		}),
 	]);
 	if (!resolved) {
-		throw new Error('Agent host did not register a copilotcli agent within the timeout period. Ensure the agent host is enabled and running.');
+		throw new Error('Agent host did not register an agent (OpenCode/Copilot) within the timeout period. Ensure the agent host is enabled and running.');
 	}
 	return `agent-host-${resolved.provider}`;
 }
@@ -342,15 +346,16 @@ async function openNewAgentHostSession(accessor: ServicesAccessor, position: Cha
 }
 
 // Static sidebar/editor open commands for the Agent Host umbrella scheme.
-// The dynamic per-agent commands (e.g. `agent-host-copilot`) are only
+// The dynamic per-agent commands (e.g. `agent-host-opencode`) are only
 // registered after the agent host starts and surfaces an AgentInfo, which
-// is asynchronous. Provide stable command ids that automation (evals) can
-// invoke before the dynamic registration has occurred.
-CommandsRegistry.registerCommand(
-	`workbench.action.chat.openNewSessionSidebar.${AgentSessionProviders.AgentHostCopilot}`,
-	accessor => openNewAgentHostSession(accessor, ChatSessionPosition.Sidebar)
-);
-CommandsRegistry.registerCommand(
-	`workbench.action.chat.openNewSessionEditor.${AgentSessionProviders.AgentHostCopilot}`,
-	accessor => openNewAgentHostSession(accessor, ChatSessionPosition.Editor)
-);
+// is asynchronous. Provide stable command ids that automation (evals) and
+// Community status-bar actions can invoke before dynamic registration.
+const openAgentHostSidebar = (accessor: ServicesAccessor) => openNewAgentHostSession(accessor, ChatSessionPosition.Sidebar);
+const openAgentHostEditor = (accessor: ServicesAccessor) => openNewAgentHostSession(accessor, ChatSessionPosition.Editor);
+for (const sessionType of [
+	AgentSessionProviders.AgentHostCopilot, // legacy id
+	'agent-host-opencode',
+]) {
+	CommandsRegistry.registerCommand(`workbench.action.chat.openNewSessionSidebar.${sessionType}`, openAgentHostSidebar);
+	CommandsRegistry.registerCommand(`workbench.action.chat.openNewSessionEditor.${sessionType}`, openAgentHostEditor);
+}

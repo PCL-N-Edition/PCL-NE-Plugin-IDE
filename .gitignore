@@ -49,3 +49,9 @@ dist
 .github/prompts/*.local.prompt.md
 .agents/skills/.local/
 .github/skills/.local/
+
+# PCL Community fixture outputs
+fixtures/**/bin/
+fixtures/**/obj/
+fixtures/**/dist/
+

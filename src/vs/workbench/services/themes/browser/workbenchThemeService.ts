@@ -51,7 +51,7 @@ import { toAction } from '../../../../base/common/actions.js';
 
 const defaultThemeExtensionId = 'vscode-theme-defaults';
 
-const DEFAULT_FILE_ICON_THEME_ID = 'vscode.vscode-theme-seti-vs-seti';
+const DEFAULT_FILE_ICON_THEME_ID = 'vscode.vscode-modern-icons-vscode-modern-icons';
 const fileIconsEnabledClass = 'file-icons-enabled';
 
 const colorThemeRulesClassName = 'contributedColorTheme';
@@ -265,8 +265,12 @@ export class WorkbenchThemeService extends Disposable implements IWorkbenchTheme
 			if (!this.settings.isDefaultColorTheme() || !previousSettingsId) {
 				return;
 			}
-			previousSettingsId = migrateThemeSettingsId(previousSettingsId);
-			if (!['Dark Modern', 'Light Modern'].includes(previousSettingsId)) {
+			const migratedPrevious = migrateThemeSettingsId(previousSettingsId);
+			// Only prompt when the user previously used a legacy Modern / classic theme that
+			// Community Edition now maps onto the VS 2026 defaults.
+			const wasLegacyModern = previousSettingsId !== migratedPrevious
+				&& [ThemeSettingDefaults.COLOR_THEME_DARK, ThemeSettingDefaults.COLOR_THEME_LIGHT].includes(migratedPrevious);
+			if (!wasLegacyModern) {
 				return;
 			}
 			if (![ThemeSettingDefaults.COLOR_THEME_DARK, ThemeSettingDefaults.COLOR_THEME_LIGHT].includes(this.settings.colorTheme)) {

@@ -35,12 +35,9 @@ export class OpenFileAction extends Action2 {
 			id: OpenFileAction.ID,
 			title: localize2('openFile', 'Open File...'),
 			category: Categories.File,
-			f1: true,
-			keybinding: {
-				when: IsMacNativeContext.toNegated(),
-				weight: KeybindingWeight.WorkbenchContrib,
-				primary: KeyMod.CtrlCmd | KeyCode.KeyO
-			}
+			// Community Edition: Ctrl/Cmd+O opens a Plugin project (pcl.community.openProject).
+			// Keep the plain open-file command in the palette without a default keybinding.
+			f1: true
 		});
 	}
 
@@ -98,10 +95,7 @@ export class OpenFolderViaWorkspaceAction extends Action2 {
 			category: Categories.File,
 			f1: true,
 			precondition: ContextKeyExpr.and(OpenFolderWorkspaceSupportContext.toNegated(), WorkbenchStateContext.isEqualTo('workspace')),
-			keybinding: {
-				weight: KeybindingWeight.WorkbenchContrib,
-				primary: KeyMod.CtrlCmd | KeyCode.KeyO
-			}
+			// Community Edition: Ctrl/Cmd+O is reserved for opening Plugin projects.
 		});
 	}
 
@@ -124,10 +118,7 @@ export class OpenFileFolderAction extends Action2 {
 			category: Categories.File,
 			f1: true,
 			precondition: ContextKeyExpr.and(IsMacNativeContext, OpenFolderWorkspaceSupportContext),
-			keybinding: {
-				weight: KeybindingWeight.WorkbenchContrib,
-				primary: KeyMod.CtrlCmd | KeyCode.KeyO
-			}
+			// Community Edition: Ctrl/Cmd+O is reserved for opening Plugin projects.
 		});
 	}
 
@@ -336,13 +327,23 @@ registerAction2(DuplicateWorkspaceInNewWindowAction);
 
 // --- Menu Registration
 
+// Community Edition primary open entry: Plugin project (handled by pcl-community extension).
+MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
+	group: '2_open',
+	command: {
+		id: 'pcl.community.openProject',
+		title: localize({ key: 'miOpenPluginProject', comment: ['&& denotes a mnemonic'] }, "&&Open Plugin Project...")
+	},
+	order: 1
+});
+
 MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
 	group: '2_open',
 	command: {
 		id: OpenFileAction.ID,
-		title: localize({ key: 'miOpenFile', comment: ['&& denotes a mnemonic'] }, "&&Open File...")
+		title: localize({ key: 'miOpenFile', comment: ['&& denotes a mnemonic'] }, "Open &&File...")
 	},
-	order: 1,
+	order: 2,
 	when: IsMacNativeContext.toNegated()
 });
 
@@ -352,7 +353,7 @@ MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
 		id: OpenFolderAction.ID,
 		title: localize({ key: 'miOpenFolder', comment: ['&& denotes a mnemonic'] }, "Open &&Folder...")
 	},
-	order: 2,
+	order: 3,
 	when: OpenFolderWorkspaceSupportContext
 });
 
@@ -362,18 +363,8 @@ MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
 		id: OpenFolderViaWorkspaceAction.ID,
 		title: localize({ key: 'miOpenFolder', comment: ['&& denotes a mnemonic'] }, "Open &&Folder...")
 	},
-	order: 2,
+	order: 3,
 	when: ContextKeyExpr.and(OpenFolderWorkspaceSupportContext.toNegated(), WorkbenchStateContext.isEqualTo('workspace'))
-});
-
-MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
-	group: '2_open',
-	command: {
-		id: OpenFileFolderAction.ID,
-		title: localize({ key: 'miOpen', comment: ['&& denotes a mnemonic'] }, "&&Open...")
-	},
-	order: 1,
-	when: ContextKeyExpr.and(IsMacNativeContext, OpenFolderWorkspaceSupportContext)
 });
 
 MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
@@ -382,7 +373,7 @@ MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
 		id: OpenWorkspaceAction.ID,
 		title: localize({ key: 'miOpenWorkspace', comment: ['&& denotes a mnemonic'] }, "Open Wor&&kspace from File...")
 	},
-	order: 3,
+	order: 4,
 	when: EnterMultiRootWorkspaceSupportContext
 });
 

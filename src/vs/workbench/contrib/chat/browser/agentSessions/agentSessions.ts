@@ -58,7 +58,7 @@ export function getAgentSessionProviderName(provider: AgentSessionTarget): strin
 		case AgentSessionProviders.Local:
 			return localize('chat.session.providerLabel.local', "Local");
 		case AgentSessionProviders.Background:
-			return localize('chat.session.providerLabel.background', "Copilot CLI");
+			return localize('chat.session.providerLabel.background', "Background Agent");
 		case AgentSessionProviders.Cloud:
 			return localize('chat.session.providerLabel.cloud', "Cloud");
 		case AgentSessionProviders.AgentHostClaude:
@@ -67,10 +67,16 @@ export function getAgentSessionProviderName(provider: AgentSessionTarget): strin
 		case AgentSessionProviders.AgentHostCodex:
 			return 'Codex';
 		case AgentSessionProviders.Growth:
-			return 'Growth';
+			return localize('chat.session.providerLabel.growth', "Tips");
 		case AgentSessionProviders.AgentHostCopilot:
-			return localize('chat.session.providerLabel.agentHostCopilot', "Copilot");
+			// Community Edition surfaces OpenCode as the primary host agent; keep
+			// the legacy id only for session migration of old URIs.
+			return localize('chat.session.providerLabel.agentHostCopilot', "OpenCode");
 		default:
+			// Dynamic types like `agent-host-opencode` show a friendly label.
+			if (typeof provider === 'string' && (provider === 'opencode' || provider.includes('opencode'))) {
+				return localize('chat.session.providerLabel.openCode', "OpenCode");
+			}
 			return provider;
 	}
 }
@@ -172,20 +178,23 @@ export function getAgentSessionProviderDescription(provider: AgentSessionTarget)
 		case AgentSessionProviders.Local:
 			return localize('chat.session.providerDescription.local', "Run tasks within VS Code chat. The agent iterates via chat and works interactively to implement changes on your main workspace.");
 		case AgentSessionProviders.Background:
-			return localize('chat.session.providerDescription.background', "Delegate tasks to a background agent running locally on your machine. The agent iterates via chat and works asynchronously in a Git worktree to implement changes isolated from your main workspace using the GitHub Copilot CLI.");
+			return localize('chat.session.providerDescription.background', "Delegate tasks to a background agent running locally on your machine. The agent iterates via chat and works asynchronously in a Git worktree isolated from your main workspace.");
 		case AgentSessionProviders.Cloud:
-			return localize('chat.session.providerDescription.cloud', "Delegate tasks to the GitHub Copilot coding agent. The agent iterates via chat and works asynchronously in the cloud to implement changes and pull requests as needed.");
+			return localize('chat.session.providerDescription.cloud', "Delegate tasks to a cloud coding agent. The agent iterates via chat and works asynchronously in the cloud.");
 		case AgentSessionProviders.AgentHostClaude:
-			return localize('chat.session.providerDescription.claude', "Delegate tasks to the Claude Agent SDK using the Claude models included in your GitHub Copilot subscription. The agent iterates via chat and works interactively to implement changes on your main workspace.");
+			return localize('chat.session.providerDescription.claude', "Delegate tasks to the Claude Agent SDK. The agent iterates via chat and works interactively on your main workspace.");
 		case AgentSessionProviders.Codex:
 			return localize('chat.session.providerDescription.codex', "Open a new Codex session using the Codex extension from OpenAI. Codex sessions can be managed from the chat sessions view.");
 		case AgentSessionProviders.AgentHostCodex:
-			return localize('chat.session.providerDescription.agentHostCodex', "Delegate tasks to the Codex App Server using the Codex models included in your GitHub Copilot subscription. The agent iterates via chat and works interactively to implement changes on your main workspace.");
+			return localize('chat.session.providerDescription.agentHostCodex', "Delegate tasks to the Codex App Server. The agent iterates via chat and works interactively on your main workspace.");
 		case AgentSessionProviders.Growth:
-			return localize('chat.session.providerDescription.growth', "Learn about Copilot features.");
+			return localize('chat.session.providerDescription.growth', "Learn about agent features in this IDE.");
 		case AgentSessionProviders.AgentHostCopilot:
-			return localize('chat.session.providerDescription.agentHostCopilot', "Run a Copilot SDK agent in the local agent host process.");
+			return localize('chat.session.providerDescription.agentHostCopilot', "Run the OpenCode agent (or a legacy Copilot host session) in the local agent host process.");
 		default:
+			if (typeof provider === 'string' && (provider.includes('opencode') || provider.endsWith('-opencode'))) {
+				return localize('chat.session.providerDescription.openCode', "Run the open-source OpenCode agent via opencode serve. Model-agnostic; configure providers with OpenCode auth. CLI is auto-installed if missing.");
+			}
 			return '';
 	}
 }

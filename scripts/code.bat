@@ -1,14 +1,14 @@
 @echo off
 setlocal
 
-title VSCode Dev
+title PCL NE Plugin IDE Dev
 
 pushd %~dp0\..
 
 :: Get electron, compile, built-in extensions
 if "%VSCODE_SKIP_PRELAUNCH%"=="" (
 	node build/lib/preLaunch.ts || (
-		echo Failed to prepare VS Code for launch ^(build/lib/preLaunch.ts^). 1>&2
+		echo Failed to prepare PCL NE Plugin IDE for launch ^(build/lib/preLaunch.ts^). 1>&2
 		exit /b 1
 	)
 )
@@ -36,7 +36,7 @@ for %%A in (%*) do (
 	)
 )
 
-:: Launch Code
+:: Launch Community IDE (product.json keeps its profile separate from VS Code)
 %CODE% . %DISABLE_TEST_EXTENSION% %*
 goto end
 

@@ -207,6 +207,18 @@
 		"_project": {
 			"iconPath": "./images/project.svg"
 		},
+		"_csharp": {
+			"iconPath": "./images/csharp.svg"
+		},
+		"_dotnetProject": {
+			"iconPath": "./images/dotnet-project.svg"
+		},
+		"_dotnetSolution": {
+			"iconPath": "./images/dotnet-solution.svg"
+		},
+		"_pclPlugin": {
+			"iconPath": "./images/pcl-plugin.svg"
+		},
 		"_prolog": {
 			"iconPath": "./images/prolog.svg"
 		},
@@ -516,7 +528,8 @@
 		"tmp": "_time_cop",
 		"ds_store": "_ignored",
 		"code-workspace": "_project",
-		"csproj": "_project",
+		"cs": "_csharp",
+		"csproj": "_dotnetProject",
 		"cts": "_typescript",
 		"d.ts": "_typescript",
 		"frame": "_frame",
@@ -525,7 +538,8 @@
 		"mts": "_typescript",
 		"nlm": "_nlm",
 		"sln": "_project",
-		"slnx": "_project",
+		"slnx": "_dotnetSolution",
+		"nplug": "_pclPlugin",
 		"ts": "_typescript",
 		"tsx": "_typescript",
 		"vbproj": "_project",

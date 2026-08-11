@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.1.0</Version>
+    <AssemblyName>HelloPcl</AssemblyName>
+    <RootNamespace>HelloPcl</RootNamespace>
+    <PclNPluginId>com.pcln.hello-pcl</PclNPluginId>
+    <PclNPluginSign>false</PclNPluginSign>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PCLN.Plugin.Abstractions" Version="0.2.5" />
+    <PackageReference Include="PCLN.Plugin.Sdk" Version="0.2.5" PrivateAssets="all" />
+    <PackageReference Include="PCLN.Plugin.Analyzers" Version="0.2.5" PrivateAssets="all" />
+    <PackageReference Include="PCLN.Plugin.Sdk.Build" Version="0.2.5" PrivateAssets="all" />
+    <AdditionalFiles Include="plugin.json" />
+  </ItemGroup>
+</Project>

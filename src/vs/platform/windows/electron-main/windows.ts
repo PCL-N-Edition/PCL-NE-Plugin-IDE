@@ -183,9 +183,12 @@ export function defaultBrowserWindowOptions(accessor: ServicesAccessor, windowSt
 	if (isLinux) {
 		options.icon = join(environmentMainService.appRoot, 'resources/linux/code.png'); // always on Linux
 	} else if (isWindows) {
-		if (!environmentMainService.isBuilt) {
-			options.icon = join(environmentMainService.appRoot, 'resources/win32/code_150x150.png'); // only when running out of sources on Windows
-		}
+		// Community branding: window + taskbar icon.
+		// Built installs use the .exe icon (resources/win32/code.ico); from-sources uses the PNG.
+		const winIcon = environmentMainService.isBuilt
+			? join(environmentMainService.appRoot, 'resources/win32/code.ico')
+			: join(environmentMainService.appRoot, 'resources/win32/code-community.png');
+		options.icon = winIcon;
 	}
 
 	if (isMacintosh) {

@@ -51,41 +51,22 @@ function onExtensionCompilationEnd(): void {
 // 	ignore: ['**/out/**', '**/node_modules/**']
 // });
 const compilations = [
+	// Community Edition ships a focused set of built-in extensions for PCL-N
+	// plugin development (C# / JSON / XML / Markdown / Git / Debug / themes).
 	'extensions/configuration-editing/tsconfig.json',
-	'extensions/css-language-features/client/tsconfig.json',
-	'extensions/css-language-features/server/tsconfig.json',
 	'extensions/debug-auto-launch/tsconfig.json',
 	'extensions/debug-server-ready/tsconfig.json',
-	'extensions/emmet/tsconfig.json',
-	'extensions/extension-editing/tsconfig.json',
 	'extensions/git/tsconfig.json',
 	'extensions/git-base/tsconfig.json',
-	'extensions/github/tsconfig.json',
-	'extensions/github-authentication/tsconfig.json',
-	'extensions/grunt/tsconfig.json',
-	'extensions/gulp/tsconfig.json',
-	'extensions/html-language-features/client/tsconfig.json',
-	'extensions/html-language-features/server/tsconfig.json',
-	'extensions/ipynb/tsconfig.json',
-	'extensions/jake/tsconfig.json',
 	'extensions/json-language-features/client/tsconfig.json',
 	'extensions/json-language-features/server/tsconfig.json',
 	'extensions/markdown-language-features/tsconfig.json',
-	'extensions/markdown-math/tsconfig.json',
 	'extensions/media-preview/tsconfig.json',
 	'extensions/merge-conflict/tsconfig.json',
-	'extensions/mermaid-markdown-features/tsconfig.json',
-	'extensions/terminal-suggest/tsconfig.json',
-	'extensions/microsoft-authentication/tsconfig.json',
-	'extensions/notebook-renderers/tsconfig.json',
-	'extensions/npm/tsconfig.json',
-	'extensions/php-language-features/tsconfig.json',
+	'extensions/pcl-community/tsconfig.json',
 	'extensions/references-view/tsconfig.json',
 	'extensions/search-result/tsconfig.json',
-	'extensions/simple-browser/tsconfig.json',
-	'extensions/tunnel-forwarding/tsconfig.json',
-	'extensions/typescript-language-features/web/tsconfig.json',
-	'extensions/typescript-language-features/tsconfig.json',
+	'extensions/terminal-suggest/tsconfig.json',
 	'extensions/vscode-api-tests/tsconfig.json',
 	'extensions/vscode-colorize-tests/tsconfig.json',
 	'extensions/vscode-colorize-perf-tests/tsconfig.json',
@@ -282,13 +263,6 @@ task.task(compileNonNativeExtensionsBuildTask);
  */
 export const compileNativeExtensionsBuildTask = task.define('compile-native-extensions-build', () => ext.packageNativeLocalExtensionsStream(false, false).pipe(gulp.dest('.build')));
 task.task(compileNativeExtensionsBuildTask);
-
-/**
- * Compiles the built-in copilot extension for the build.
- * Used by non-CI local builds where copilot is not downloaded as a VSIX.
- */
-export const compileCopilotExtensionBuildTask = task.define('compile-copilot-extension-build', () => ext.packageCopilotExtensionStream(false).pipe(gulp.dest('.build')));
-task.task(compileCopilotExtensionBuildTask);
 
 /**
  * Compiles the extensions for the build.

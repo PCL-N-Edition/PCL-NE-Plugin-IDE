@@ -98,6 +98,10 @@ export interface IDictationRuntimeProductConfig {
 
 export interface IProductConfiguration {
 	readonly version: string;
+	/** Community product release version, independent from extension API compatibility. */
+	readonly communityRelease?: string;
+	/** Code - OSS version used as the upstream/API compatibility baseline. */
+	readonly upstreamVersion?: string;
 	readonly date?: string;
 	readonly quality?: string;
 	readonly commit?: string;
@@ -269,7 +273,8 @@ export interface IProductConfiguration {
 	readonly commonlyUsedSettings?: string[];
 	readonly aiGeneratedWorkspaceTrust?: IAiGeneratedWorkspaceTrust;
 
-	readonly defaultChatAgent: IDefaultChatAgent;
+	/** Optional: absent in products that do not ship Copilot/chat (e.g. Community Edition). */
+	readonly defaultChatAgent?: IDefaultChatAgent;
 	readonly chatParticipantRegistry?: string;
 	readonly chatSessionRecommendations?: IChatSessionRecommendation[];
 	readonly emergencyAlertUrl?: string;

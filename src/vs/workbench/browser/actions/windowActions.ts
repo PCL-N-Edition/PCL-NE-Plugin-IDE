@@ -23,7 +23,7 @@ import { URI } from '../../../base/common/uri.js';
 import { getIconClasses } from '../../../editor/common/services/getIconClasses.js';
 import { FileKind } from '../../../platform/files/common/files.js';
 import { splitRecentLabel } from '../../../base/common/labels.js';
-import { isMacintosh, isWeb, isWindows } from '../../../base/common/platform.js';
+import { isMacintosh } from '../../../base/common/platform.js';
 import { ContextKeyExpr } from '../../../platform/contextkey/common/contextkey.js';
 import { inQuickPickContext, getQuickNavigateHandler } from '../quickaccess.js';
 import { IHostService } from '../../services/host/browser/host.js';
@@ -431,13 +431,13 @@ class NewWindowAction extends Action2 {
 			f1: true,
 			keybinding: {
 				weight: KeybindingWeight.WorkbenchContrib,
-				primary: isWeb ? (isWindows ? KeyChord(KeyMod.CtrlCmd | KeyCode.KeyK, KeyMod.Shift | KeyCode.KeyN) : KeyMod.CtrlCmd | KeyMod.Alt | KeyMod.Shift | KeyCode.KeyN) : KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyN,
-				secondary: isWeb ? [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyN] : undefined
+				// Community Edition: Ctrl/Cmd+Shift+N is "New File"; rebind New Window away from that chord.
+				primary: KeyChord(KeyMod.CtrlCmd | KeyCode.KeyK, KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyN),
 			},
 			menu: {
 				id: MenuId.MenubarFileMenu,
 				group: '1_new',
-				order: 3,
+				order: 4,
 			}
 		});
 	}

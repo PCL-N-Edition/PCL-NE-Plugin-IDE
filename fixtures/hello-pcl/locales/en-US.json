@@ -1,0 +1,6 @@
+{
+	"settings.title": "Hello PCL",
+	"settings.heading": "Community fixture",
+	"settings.description": "Minimal PCL N plugin used by IDE M1 e2e tests.",
+	"settings.experimental": "SDK integration is experimental."
+}

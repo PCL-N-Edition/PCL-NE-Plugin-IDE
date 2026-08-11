@@ -1,0 +1,20 @@
+{
+	"displayName": "PCL Community",
+	"description": "PCL-N plugin project, manifest, Roslyn, build, package, and validation tooling for Community Edition",
+	"untrustedWorkspaces.description": "PCL Community tooling requires a trusted workspace to run .NET build and package commands.",
+	"command.openProject": "Open Plugin Project",
+	"command.createProject": "New Plugin Project",
+	"command.newFile": "New File",
+	"command.checkEnvironment": "Check Environment",
+	"command.installCsharpLanguageServer": "Install or Update C# Language Server",
+	"command.restore": "Restore Plugin Dependencies",
+	"command.build": "Build Plugin",
+	"command.package": "Package Plugin (.pnp)",
+	"command.validate": "Validate Plugin Package",
+	"command.developmentSign": "Development Sign Package",
+	"task.task.description": "Public PNPSDK task to run",
+	"config.sdkVersion": "Public PNPSDK version used by generated projects and diagnostics.",
+	"config.dotnetPath": "Path or command name of the .NET SDK CLI.",
+	"config.csharpLsPath": "Optional absolute path to csharp-ls. Leave empty to use the IDE-managed installation or PATH.",
+	"config.csharpLsAutoInstall": "Install the pinned csharp-ls tool into the IDE user-data directory when a PCL plugin workspace is opened."
+}

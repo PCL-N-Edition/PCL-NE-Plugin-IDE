@@ -130,7 +130,8 @@ export class StyleOverridesContribution extends Disposable implements IWorkbench
 	}
 
 	private isEnabled(): boolean {
-		return this.configurationService.getValue<boolean>(LayoutSettings.MODERN_UI) === true;
+		// Community Edition has one supported shell: the Modern UI.
+		return true;
 	}
 
 	private hasActiveLayoutAffectingModule(): boolean {

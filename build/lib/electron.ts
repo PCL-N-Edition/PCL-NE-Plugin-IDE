@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { Readable } from 'stream';
 import vfs from 'vinyl-fs';
 import { filter, jsonEditor } from './gulp/facade.ts';
@@ -112,6 +113,17 @@ const { electronVersion, msBuildId } = util.getElectronVersion();
 // contains exactly one file, which is streamed back as a `Response` and
 // validated against the feed's `SHASUMS256.txt`.
 const electronFeed: string | undefined = product.electronArtifactFeed;
+const localElectronArchive = process.env['PCL_ELECTRON_ARCHIVE'];
+
+async function sha256File(filePath: string): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const hash = crypto.createHash('sha256');
+		const input = fs.createReadStream(filePath);
+		input.on('error', reject);
+		input.on('data', chunk => hash.update(chunk));
+		input.on('end', () => resolve(hash.digest('hex')));
+	});
+}
 
 // Maps the artifact file name `@vscode/gulp-electron` requests to the matching
 // universal package name in the feed, or `undefined` when it is not mirrored.
@@ -125,7 +137,25 @@ function feedPackageName(fileName: string): string | undefined {
 	return fileName.replace(/\.zip$/, '');
 }
 
-const electronAssetResolver = electronFeed
+const electronAssetResolver = localElectronArchive
+	? async ({ fileName }: { url: string; fileName: string }): Promise<Response> => {
+		const archivePath = path.resolve(localElectronArchive);
+		const archiveName = path.basename(archivePath);
+		if (!fs.existsSync(archivePath)) {
+			throw new Error(`PCL_ELECTRON_ARCHIVE does not exist: ${archivePath}`);
+		}
+		if (fileName === 'SHASUMS256.txt') {
+			const checksum = await sha256File(archivePath);
+			return new Response(`${checksum} *${archiveName}\n`, { status: 200 });
+		}
+		if (fileName !== archiveName) {
+			return new Response(null, { status: 404 });
+		}
+		const size = (await fs.promises.stat(archivePath)).size;
+		const body = Readable.toWeb(fs.createReadStream(archivePath)) as ReadableStream<Uint8Array>;
+		return new Response(body, { status: 200, headers: { 'Content-Length': String(size) } });
+	}
+	: electronFeed
 	? async ({ fileName }: { url: string; fileName: string }): Promise<Response> => {
 		const name = feedPackageName(fileName);
 		if (!name) {
@@ -142,8 +172,8 @@ const electronAssetResolver = electronFeed
 export const config = {
 	version: electronVersion,
 	productAppName: product.nameLong,
-	companyName: 'Microsoft Corporation',
-	copyright: 'Copyright (C) 2026 Microsoft. All rights reserved',
+	companyName: 'PCL-N Edition Contributors',
+	copyright: 'Copyright (C) 2026 PCL-N Edition Contributors',
 	darwinExecutable: product.nameShort,
 	darwinIcon: 'resources/darwin/code.icns',
 	darwinBundleIdentifier: product.darwinBundleIdentifier,

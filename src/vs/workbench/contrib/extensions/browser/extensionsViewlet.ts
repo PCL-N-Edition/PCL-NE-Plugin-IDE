@@ -169,6 +169,23 @@ export class ExtensionsViewletViewsContribution extends Disposable implements IW
 		const viewDescriptors: IViewDescriptor[] = [];
 
 		/*
+		 * Community does not configure an online extension gallery. In a clean
+		 * profile that also means there are no user-installed extensions, so the
+		 * upstream default view would render an empty Extensions container even
+		 * though the product ships local extensions. Keep those extensions visible
+		 * and manageable without implying that an online marketplace is available.
+		 */
+		viewDescriptors.push({
+			id: 'workbench.views.extensions.communityBuiltin',
+			name: localize2('communityBuiltinExtensions', "Built-in Extensions"),
+			ctorDescriptor: new SyncDescriptor(StaticQueryExtensionsView, [{ query: '@builtin', flexibleHeight: true }]),
+			when: ContextKeyExpr.and(DefaultViewsContext, CONTEXT_HAS_GALLERY.negate()),
+			weight: 110,
+			order: 0,
+			canToggleVisibility: false
+		});
+
+		/*
 		 * Default installed extensions views - Shows all user installed extensions.
 		 */
 		const servers: IExtensionManagementServer[] = [];
@@ -206,7 +223,10 @@ export class ExtensionsViewletViewsContribution extends Disposable implements IW
 				},
 				weight: 100,
 				order: 1,
-				when: ContextKeyExpr.and(DefaultViewsContext),
+				when: ContextKeyExpr.and(
+					DefaultViewsContext,
+					ContextKeyExpr.or(CONTEXT_HAS_GALLERY, ContextKeyExpr.has('hasInstalledExtensions'))
+				),
 				ctorDescriptor: new SyncDescriptor(ServerInstalledExtensionsView, [{ server, flexibleHeight: true, onDidChangeTitle }]),
 				/* Installed extensions views shall not be allowed to hidden when there are more than one server */
 				canToggleVisibility: servers.length === 1
@@ -627,7 +647,9 @@ export class ExtensionsViewPaneContainer extends ViewPaneContainer<IExtensionsVi
 		hide(overlay);
 
 		this.header = append(this.root, $('.header'));
-		const placeholder = localize('searchExtensions', "Search Extensions in Marketplace");
+		const placeholder = CONTEXT_HAS_GALLERY.getValue(this.contextKeyService)
+			? localize('searchExtensions', "Search Extensions in Marketplace")
+			: localize('searchLocalExtensions', "Search Local Extensions");
 
 		const searchValue = this.searchViewletState['query.value'] ? this.searchViewletState['query.value'] : '';
 
@@ -866,7 +888,7 @@ export class ExtensionsViewPaneContainer extends ViewPaneContainer<IExtensionsVi
 	}
 
 	private normalizedQuery(): string {
-		return this.searchBox
+		const query = this.searchBox
 			? this.searchBox.getValue()
 				.trim()
 				.replace(/@category/g, 'category')
@@ -875,6 +897,15 @@ export class ExtensionsViewPaneContainer extends ViewPaneContainer<IExtensionsVi
 				.replace(/@featured/g, 'featured')
 				.replace(/@popular/g, this.extensionManagementServerService.webExtensionManagementServer && !this.extensionManagementServerService.localExtensionManagementServer && !this.extensionManagementServerService.remoteExtensionManagementServer ? '@web' : '@popular')
 			: '';
+
+		// A plain query normally targets the Marketplace. Community intentionally
+		// ships without one, so keep search useful by targeting the local built-in
+		// set instead of switching the container to a view that cannot be shown.
+		if (query && !CONTEXT_HAS_GALLERY.getValue(this.contextKeyService) && !ExtensionsListView.isLocalExtensionsQuery(query) && !ExtensionsListView.isRecommendedExtensionsQuery(query)) {
+			return `@builtin ${query}`;
+		}
+
+		return query;
 	}
 
 	protected override saveState(): void {

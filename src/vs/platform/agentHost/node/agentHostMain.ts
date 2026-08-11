@@ -25,7 +25,6 @@ import { IAgentConfigurationService } from './agentConfigurationService.js';
 import { IAgentHostGitHubEndpointService } from './agentHostGitHubEndpointService.js';
 import { IAgentHostCompletions } from './agentHostCompletions.js';
 import { IAgentHostTerminalManager } from './agentHostTerminalManager.js';
-import { CopilotAgent } from './copilot/copilotAgent.js';
 import { WorktreeIsolation } from './shared/worktreeIsolation.js';
 import { CopilotApiService, ICopilotApiService } from './shared/copilotApiService.js';
 import { ClaudeAgent } from './claude/claudeAgent.js';
@@ -243,7 +242,8 @@ async function startAgentHost(): Promise<void> {
 		diServices.set(IClaudeProxyService, claudeProxyService);
 		const codexProxyService = disposables.add(instantiationService.createInstance(CodexProxyService));
 		diServices.set(ICodexProxyService, codexProxyService);
-		agentService.registerProvider(instantiationService.createInstance(CopilotAgent));
+
+		// Community Edition does not register a built-in Copilot agent provider.
 		// Claude and Codex providers are gated on two things:
 		//  1. The user-facing enable toggle (`chat.agentHost.<x>Agent.enabled`,
 		//     forwarded as an env var by the starters). Claude defaults to on,

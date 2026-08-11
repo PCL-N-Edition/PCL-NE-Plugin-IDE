@@ -633,7 +633,8 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 	}
 
 	isFloatingPanelsEnabled(): boolean {
-		return this.configurationService.getValue<boolean>(LayoutSettings.MODERN_UI) === true;
+		// Community Edition has one supported shell: the Modern UI.
+		return true;
 	}
 
 	private updateFloatingPanels(): void {

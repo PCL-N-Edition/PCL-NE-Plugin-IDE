@@ -10,7 +10,8 @@
 | Baseline branch | `main` |
 | Baseline date | 2026-08-09 |
 | Baseline commit (at Community branding) | `28144426f94` (`chore: brand Community Edition product`) and subsequent Community CI commits |
-| Product version field | Root `package.json` `version` tracks the Code - OSS version line (currently `1.133.0`) |
+| Upstream Version | `1.133.0` — root `package.json` and `product.json.upstreamVersion`; used for VS Code extension API compatibility |
+| Community Version | `0.1.0-alpha` — `product.json.communityRelease`; used for product display and Community releases |
 
 Community-specific commits after the branding baseline are intentional product divergence and must not be overwritten by a blind upstream reset.
 

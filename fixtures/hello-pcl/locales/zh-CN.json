@@ -1,0 +1,6 @@
+{
+	"settings.title": "Hello PCL",
+	"settings.heading": "Community 样例",
+	"settings.description": "IDE M1 端到端测试使用的最小 PCL N 插件。",
+	"settings.experimental": "SDK 集成仍处于实验阶段。"
+}

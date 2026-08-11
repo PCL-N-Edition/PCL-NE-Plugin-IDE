@@ -42,7 +42,7 @@ export class McpGatewayService extends Disposable implements IMcpGatewayService 
 		@ILoggerService loggerService: ILoggerService,
 	) {
 		super();
-		this._logger = this._register(loggerService.createLogger('mcpGateway', { name: 'MCP Gateway', logLevel: 'always' }));
+		this._logger = this._register(loggerService.createLogger('mcpGateway', { hidden: true, name: 'MCP Gateway', logLevel: 'always' }));
 		this._logger.info('[McpGatewayService] Initialized');
 	}
 

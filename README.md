@@ -54,6 +54,8 @@ This project is based on the open-source Visual Studio Code repository, commonly
 
 Code - OSS provides the editor and workbench foundation. PCL-N-specific functionality is developed on top of that foundation, with the goal of keeping long-term divergence controlled enough to continue integrating upstream maintenance and security updates.
 
+Current product version: **0.1.0-alpha**. Upstream Code - OSS/API compatibility version: **1.133.0**. These are intentionally separate so built-in extensions validate against the upstream API version while About and release artifacts identify the Community product version.
+
 This project is **not** Microsoft Visual Studio Code and is not distributed under the Microsoft Visual Studio Code product license. Access to the Microsoft Visual Studio Marketplace or proprietary Microsoft extensions is not implied by this repository.
 
 ## Development status
@@ -62,8 +64,8 @@ This project is **not** Microsoft Visual Studio Code and is not distributed unde
 
 | Milestone | Status | Summary |
 |---|---|---|
-| **M0** Fork baseline | Done | Product identity, upstream tracking, trim list, Community CI, security policy |
-| **M1** Plugin project alpha | Done | Create project → environment check → build → development sign → package → validate |
+| **M0** Fork baseline | Done | Community identity, modern-only UI, allowlisted product surface, CI and security boundary |
+| **M1** Plugin project alpha | Done | Create/open project → Roslyn → build → development sign → package → validate |
 | M2 Runtime & debug | Planned | Sidecar Standard, install/reload, DAP |
 | M3 Authoring | Planned | Manifest designer, AXAML |
 | M4 Community 1.0 | Planned | Registry, installers, update channel |
@@ -86,7 +88,7 @@ In the IDE (after building from sources), use the **PCL** command palette entrie
 2. retain upstream source temporarily when that materially reduces upstream-sync cost;
 3. physically remove code only after its dependency and maintenance impact is understood.
 
-See [`docs/PCL-TRIM-LIST.md`](docs/PCL-TRIM-LIST.md). Copilot product packaging and the `extensions/copilot` tree are removed. Chat/Agent host sources may remain for upstream-sync cost control and are **not** productized (no `defaultChatAgent`).
+See [`docs/PCL-TRIM-LIST.md`](docs/PCL-TRIM-LIST.md). Copilot product packaging and the `extensions/copilot` tree are removed. Retained upstream Chat/Agent service code is compile-only compatibility scaffolding: Community registers no Chat/Agent view, status, account entry, process, or `defaultChatAgent`.
 
 ## Contributing
 

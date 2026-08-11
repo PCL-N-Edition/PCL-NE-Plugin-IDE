@@ -15,7 +15,7 @@ import { IRemoteAuthorityResolverService } from '../../../../../platform/remote/
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { IWorkspaceTrustEnablementService, IWorkspaceTrustInfo } from '../../../../../platform/workspace/common/workspaceTrust.js';
-import { Workspace } from '../../../../../platform/workspace/test/common/testWorkspace.js';
+import { testWorkspace, Workspace } from '../../../../../platform/workspace/test/common/testWorkspace.js';
 import { Memento } from '../../../../common/memento.js';
 import { IWorkbenchEnvironmentService } from '../../../environment/common/environmentService.js';
 import { IUriIdentityService } from '../../../../../platform/uriIdentity/common/uriIdentity.js';
@@ -109,7 +109,7 @@ suite('Workspace Trust', () => {
 		test('empty workspace - trusted, open trusted file', async () => {
 			await configurationService.setUserConfiguration('security', getUserSettings(true, true));
 			const trustInfo: IWorkspaceTrustInfo = { uriTrustInfo: [{ uri: URI.parse('file:///Folder'), trusted: true }] };
-			storageService.store(WORKSPACE_TRUST_STORAGE_KEY, JSON.stringify(trustInfo), StorageScope.APPLICATION_SHARED, StorageTarget.MACHINE);
+			storageService.store(WORKSPACE_TRUST_STORAGE_KEY, JSON.stringify(trustInfo), StorageScope.APPLICATION, StorageTarget.MACHINE);
 
 			environmentService.filesToOpenOrCreate = [{ fileUri: URI.parse('file:///Folder/file.txt') }];
 			instantiationService.stub(IWorkbenchEnvironmentService, { ...environmentService });
@@ -157,6 +157,21 @@ suite('Workspace Trust', () => {
 			// The same folder with a different _ah payload resolves to the same trust entry.
 			const sameFolderDifferentMeta = URI.from({ scheme: AGENT_HOST_SCHEME, authority: 'my-server', path: '/Users/me/code', query: '_ah=other' });
 			assert.strictEqual(true, (await testObject.getUriTrustInfo(sameFolderDifferentMeta)).trusted);
+		});
+
+		test('folder trust is applied before setWorkspaceTrust resolves and persists with the application profile', async () => {
+			await configurationService.setUserConfiguration('security', getUserSettings(true, true));
+			const folderUri = URI.file('/CommunityPlugin');
+			workspaceService.setWorkspace(testWorkspace(folderUri));
+			const testObject = await initializeTestObject();
+
+			assert.strictEqual(false, testObject.isWorkspaceTrusted());
+			await testObject.setWorkspaceTrust(true);
+
+			assert.strictEqual(true, testObject.isWorkspaceTrusted());
+			const storedTrust = storageService.get(WORKSPACE_TRUST_STORAGE_KEY, StorageScope.APPLICATION);
+			assert.ok(storedTrust?.includes(folderUri.path));
+			assert.strictEqual(undefined, storageService.get(WORKSPACE_TRUST_STORAGE_KEY, StorageScope.APPLICATION_SHARED));
 		});
 
 		async function initializeTestObject(): Promise<WorkspaceTrustManagementService> {

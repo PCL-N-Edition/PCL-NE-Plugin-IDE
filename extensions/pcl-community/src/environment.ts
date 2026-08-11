@@ -8,6 +8,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+export const CSHARP_LS_VERSION = '0.26.0';
+
 export interface EnvironmentCheck {
 	readonly id: string;
 	readonly label: string;
@@ -17,99 +19,70 @@ export interface EnvironmentCheck {
 
 function runCommand(command: string, args: string[]): { ok: boolean; stdout: string; stderr: string } {
 	try {
-		const result = spawnSync(command, args, {
-			encoding: 'utf8',
-			shell: process.platform === 'win32',
-			timeout: 15_000,
-		});
-		const stdout = (result.stdout ?? '').toString().trim();
-		const stderr = (result.stderr ?? '').toString().trim();
+		const result = spawnSync(command, args, { encoding: 'utf8', timeout: 20_000, shell: false });
 		return {
 			ok: result.status === 0,
-			stdout,
-			stderr,
+			stdout: (result.stdout ?? '').toString().trim(),
+			stderr: (result.stderr ?? '').toString().trim(),
 		};
 	} catch (error) {
-		return {
-			ok: false,
-			stdout: '',
-			stderr: error instanceof Error ? error.message : String(error),
-		};
+		return { ok: false, stdout: '', stderr: error instanceof Error ? error.message : String(error) };
 	}
 }
 
-export function resolveCliPath(extensionPath: string): string {
-	const configured = vscode.workspace.getConfiguration('pcl.community').get<string>('cliPath')?.trim();
+export function managedCsharpLsPath(globalStoragePath: string): string {
+	return path.join(
+		globalStoragePath,
+		'tools',
+		`csharp-ls-${CSHARP_LS_VERSION}`,
+		process.platform === 'win32' ? 'csharp-ls.exe' : 'csharp-ls',
+	);
+}
+
+export function resolveCsharpLsPath(globalStoragePath: string): string | undefined {
+	const configured = vscode.workspace.getConfiguration('pcl.community').get<string>('csharpLsPath')?.trim();
 	if (configured) {
-		return configured;
+		return fs.existsSync(configured) ? configured : undefined;
 	}
-
-	// Prefer in-repo Community CLI next to the IDE sources when developing from sources.
-	const workspaceRoots = vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath) ?? [];
-	const candidates = [
-		...workspaceRoots.map(root => path.join(root, 'tools', 'pnp-community-cli', 'bin', 'pnp.js')),
-		path.join(extensionPath, '..', '..', 'tools', 'pnp-community-cli', 'bin', 'pnp.js'),
-		path.join(extensionPath, 'tools', 'pnp-community-cli', 'bin', 'pnp.js'),
-	];
-
-	for (const candidate of candidates) {
-		if (fs.existsSync(candidate)) {
-			return candidate;
-		}
+	const managed = managedCsharpLsPath(globalStoragePath);
+	if (fs.existsSync(managed)) {
+		return managed;
 	}
-
-	// PATH fallback
-	const which = runCommand(process.platform === 'win32' ? 'where' : 'which', ['pnp']);
-	if (which.ok && which.stdout) {
-		return which.stdout.split(/\r?\n/)[0].trim();
-	}
-
-	return '';
+	const probe = runCommand('csharp-ls', ['--version']);
+	return probe.ok ? 'csharp-ls' : undefined;
 }
 
-export function checkEnvironment(extensionPath: string): EnvironmentCheck[] {
+export function checkEnvironment(globalStoragePath: string): EnvironmentCheck[] {
 	const cfg = vscode.workspace.getConfiguration('pcl.community');
-	const expectedSdk = cfg.get<string>('sdkVersion') || '0.1.0';
+	const expectedSdk = cfg.get<string>('sdkVersion') || '0.2.5';
 	const dotnetPath = cfg.get<string>('dotnetPath') || 'dotnet';
-	const cliPath = resolveCliPath(extensionPath);
-
-	const checks: EnvironmentCheck[] = [];
-
 	const dotnet = runCommand(dotnetPath, ['--version']);
-	checks.push({
-		id: 'dotnet',
-		label: '.NET SDK',
-		ok: dotnet.ok,
-		detail: dotnet.ok
-			? `Found ${dotnet.stdout}`
-			: `Unable to run '${dotnetPath} --version'. Install .NET SDK 8+ and ensure it is on PATH. ${dotnet.stderr}`,
-	});
-
-	if (!cliPath) {
-		checks.push({
-			id: 'pnp-cli',
-			label: 'PNPSDK / Community pnp CLI',
-			ok: false,
-			detail: 'No pnp CLI found. Set pcl.community.cliPath or install the Public PNPSDK tooling.',
-		});
-	} else {
-		const isJs = cliPath.endsWith('.js');
-		const version = isJs
-			? runCommand(process.execPath, [cliPath, '--version'])
-			: runCommand(cliPath, ['--version']);
-		const versionText = version.stdout || version.stderr;
-		const ok = version.ok && versionText.length > 0;
-		checks.push({
-			id: 'pnp-cli',
-			label: 'PNPSDK / Community pnp CLI',
-			ok,
-			detail: ok
-				? `Found ${versionText} at ${cliPath} (expected SDK ${expectedSdk})`
-				: `Failed to execute CLI at ${cliPath}. ${version.stderr}`,
-		});
-	}
-
-	return checks;
+	const dotnetMajor = Number.parseInt(dotnet.stdout.split('.')[0], 10);
+	const csharpLs = resolveCsharpLsPath(globalStoragePath);
+	return [
+		{
+			id: 'dotnet',
+			label: '.NET SDK 10',
+			ok: dotnet.ok && dotnetMajor >= 10,
+			detail: dotnet.ok && dotnetMajor >= 10
+				? `Found ${dotnet.stdout}`
+				: `Install .NET SDK 10 and ensure '${dotnetPath}' is available. ${dotnet.stderr}`.trim(),
+		},
+		{
+			id: 'pnpsdk',
+			label: 'Public PNPSDK',
+			ok: true,
+			detail: `Generated projects restore PCLN.Plugin.* ${expectedSdk} from NuGet.`,
+		},
+		{
+			id: 'csharp-ls',
+			label: 'Roslyn C# language server',
+			ok: !!csharpLs,
+			detail: csharpLs
+				? `Found ${csharpLs} (pinned tool version ${CSHARP_LS_VERSION}).`
+				: 'Not installed. Run “PCL: Install or Update C# Language Server”.',
+		},
+	];
 }
 
 export function formatEnvironmentReport(checks: EnvironmentCheck[]): string {
@@ -117,8 +90,7 @@ export function formatEnvironmentReport(checks: EnvironmentCheck[]): string {
 	for (const check of checks) {
 		lines.push(`${check.ok ? '✓' : '✗'} ${check.label}: ${check.detail}`);
 	}
-	const failed = checks.filter(c => !c.ok);
-	lines.push('');
-	lines.push(failed.length ? `${failed.length} issue(s) found.` : 'All checks passed.');
+	const failed = checks.filter(check => !check.ok);
+	lines.push('', failed.length ? `${failed.length} issue(s) found.` : 'All checks passed.');
 	return lines.join('\n');
 }

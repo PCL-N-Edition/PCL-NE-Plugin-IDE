@@ -48,7 +48,7 @@ export const DEFAULT_EDITOR_PART_OPTIONS: IEditorPartOptions = {
 	titleScrollbarVisibility: 'auto',
 	focusRecentEditorAfterClose: true,
 	showIcons: true,
-	hasIcons: true, // 'vs-seti' is our default icon theme
+	hasIcons: true, // 'vscode-modern-icons' is Community Edition default
 	enablePreview: true,
 	openPositioning: 'right',
 	openSideBySideDirection: 'right',

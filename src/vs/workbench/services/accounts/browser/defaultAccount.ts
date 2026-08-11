@@ -89,7 +89,31 @@ interface IMcpRegistryResponse {
 	readonly mcp_registries: ReadonlyArray<IMcpRegistryProvider>;
 }
 
-function toDefaultAccountConfig(defaultChatAgent: IDefaultChatAgent): IDefaultAccountConfig {
+function toDefaultAccountConfig(defaultChatAgent: IDefaultChatAgent | undefined): IDefaultAccountConfig {
+	// Products without Copilot/chat (Community Edition) omit defaultChatAgent entirely.
+	if (!defaultChatAgent) {
+		return {
+			preferredExtensions: [],
+			authenticationProvider: {
+				default: {
+					id: '',
+					name: '',
+				},
+				enterprise: {
+					id: '',
+					name: '',
+				},
+				enterpriseProviderConfig: '',
+				enterpriseProviderUriSetting: '',
+				scopes: [],
+			},
+			entitlementUrl: '',
+			tokenEntitlementUrl: '',
+			mcpRegistryDataUrl: '',
+			managedSettingsUrl: '',
+		};
+	}
+
 	return {
 		preferredExtensions: [
 			defaultChatAgent.chatExtensionId,
@@ -146,6 +170,11 @@ export class DefaultAccountService extends Disposable implements IDefaultAccount
 	) {
 		super();
 		this.defaultAccountConfig = toDefaultAccountConfig(productService.defaultChatAgent);
+		// Without a product chat/account agent there is no provider contribution —
+		// open the init barrier so callers of getDefaultAccount() do not hang.
+		if (!productService.defaultChatAgent) {
+			this.initBarrier.open();
+		}
 	}
 
 	async getDefaultAccount(): Promise<IDefaultAccount | null> {
@@ -1198,6 +1227,10 @@ class DefaultAccountProviderContribution extends Disposable implements IWorkbenc
 		@IDefaultAccountService defaultAccountService: IDefaultAccountService,
 	) {
 		super();
+		if (!productService.defaultChatAgent) {
+			// Community Edition / OSS builds without Copilot product configuration.
+			return;
+		}
 		const defaultAccountProvider = this._register(instantiationService.createInstance(DefaultAccountProvider, toDefaultAccountConfig(productService.defaultChatAgent)));
 		defaultAccountService.setDefaultAccountProvider(defaultAccountProvider);
 	}

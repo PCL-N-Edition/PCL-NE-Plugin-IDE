@@ -1,24 +1,22 @@
 # ADR-002 — C# / Roslyn language service
 
-- Status: Accepted (interim for M1)
-- Date: 2026-08-09
+- Status: Accepted (Community M1 implemented)
+- Date: 2026-08-11
 
 ## Context
 
-Full Roslyn Language Server packaging has license, binary size, update, and signing implications.
+Community needs Roslyn-based navigation, completion, diagnostics, and solution loading without depending on proprietary C# Dev Kit binaries.
 
-## Decision (M1 interim)
+## Decision
 
-1. Ship **C# TextMate grammar** (`extensions/csharp`) for highlighting and snippets.
-2. Use **`dotnet build`** via the Community `pnp` CLI for compile diagnostics in M1.
-3. Defer embedding a full Roslyn LS / OmniSharp binary into the product until a dedicated distribution and update story exists.
-4. Extension setting `pcl.community.dotnetPath` configures the SDK used for environment checks.
-
-## Follow-up
-
-- Evaluate C# Dev Kit licensing (not acceptable for pure OSS product binary without clear terms).
-- Prefer an OSS Roslyn LS or `csharp-ls` style server with explicit version pinning in M2/M3.
+1. Keep the built-in C# TextMate grammar for syntax highlighting and snippets.
+2. Pin the MIT-licensed `csharp-ls` tool at `0.26.0` and install it per IDE profile with `dotnet tool install --tool-path`.
+3. Allow an explicit executable through `pcl.community.csharpLsPath`; otherwise use the managed install, then `PATH` as a final fallback.
+4. Start the server only for trusted file workspaces and watch `.csproj`, `.slnx`, and `Directory.Build.*` changes.
+5. Decode server stderr as UTF-8 and classify its structured `debug/info/warn/error` records by content. `csharp-ls` writes normal .NET logs to stderr, so stream choice alone must not mark them as errors.
 
 ## Consequences
 
-- M1 exit criteria focus on project + package pipeline correctness, not full IntelliSense parity with Visual Studio.
+- Community provides real Roslyn language features while keeping the binary out of the application package.
+- First use requires network access unless the tool is already installed or a path is configured.
+- The pinned version and per-profile install directory make upgrades explicit and reversible.

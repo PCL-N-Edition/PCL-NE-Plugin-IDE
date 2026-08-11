@@ -1,62 +1,68 @@
-# Community Edition M1 end-to-end: fixture create-path simulation via existing fixture + CLI.
+# Community Edition M1 end-to-end: Public PNPSDK restore -> build -> sign -> package -> validate.
 $ErrorActionPreference = 'Stop'
 
-$root = Split-Path -Parent $PSScriptRoot
-$fixture = Join-Path $root 'fixtures\hello-pcl'
-$cli = Join-Path $root 'tools\pnp-community-cli\bin\pnp.js'
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$fixture = Join-Path $repoRoot 'fixtures\hello-pcl'
+$project = Join-Path $fixture 'HelloPcl.csproj'
+$verifyDir = Join-Path $fixture '.m1-verify-windows'
 
-if (-not (Test-Path $cli)) {
-	throw "Missing Community pnp CLI at $cli"
+if (-not (Test-Path -LiteralPath $project)) {
+	throw "Missing Hello PCL fixture: $project"
 }
-if (-not (Test-Path (Join-Path $fixture 'plugin.manifest.json'))) {
-	throw "Missing Hello PCL fixture at $fixture"
-}
-
-Write-Host "==> pnp --version"
-& node $cli --version
 
 Push-Location $fixture
 try {
-	if (Test-Path 'dist') {
-		Remove-Item -Recurse -Force 'dist'
+	& dotnet restore $project
+	if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed with exit $LASTEXITCODE" }
+
+	& dotnet build $project -c Release --no-restore
+	if ($LASTEXITCODE -ne 0) { throw "dotnet build failed with exit $LASTEXITCODE" }
+
+	$package = Get-ChildItem -LiteralPath (Join-Path $fixture 'bin\Release\net10.0') -Filter '*.pnp' -File |
+		Sort-Object LastWriteTimeUtc -Descending |
+		Select-Object -First 1
+	if (-not $package) {
+		throw 'Public PNPSDK did not produce a .pnp package.'
 	}
 
-	Write-Host "==> build"
-	& node $cli build
-	if ($LASTEXITCODE -ne 0) { throw "build failed with exit $LASTEXITCODE" }
+	if (Test-Path -LiteralPath $verifyDir) {
+		Remove-Item -LiteralPath $verifyDir -Recurse -Force
+	}
+	[System.IO.Compression.ZipFile]::ExtractToDirectory($package.FullName, $verifyDir)
 
-	Write-Host "==> sign"
-	& node $cli sign
-	if ($LASTEXITCODE -ne 0) { throw "sign failed with exit $LASTEXITCODE" }
-
-	Write-Host "==> package"
-	& node $cli package
-	if ($LASTEXITCODE -ne 0) { throw "package failed with exit $LASTEXITCODE" }
-
-	Write-Host "==> validate"
-	& node $cli validate
-	if ($LASTEXITCODE -ne 0) { throw "validate failed with exit $LASTEXITCODE" }
-
-	$package = Join-Path $fixture 'dist\com.pcln.hello-pcl-0.1.0.pnp'
-	if (-not (Test-Path $package)) {
-		throw "Expected package not found: $package"
+	$required = @(
+		'plugin.json',
+		'META-INF\pnp.files.json',
+		'META-INF\pnp.signed.json',
+		'lib\net10.0\HelloPcl.dll'
+	)
+	foreach ($relative in $required) {
+		if (-not (Test-Path -LiteralPath (Join-Path $verifyDir $relative))) {
+			throw "Package is missing required entry: $relative"
+		}
+	}
+	if (-not (Get-ChildItem -LiteralPath (Join-Path $verifyDir 'META-INF\keys') -Filter '*.asc' -File)) {
+		throw 'Package is missing its development public key.'
+	}
+	if (-not (Get-ChildItem -LiteralPath (Join-Path $verifyDir 'META-INF\signatures') -Filter '*.asc' -File)) {
+		throw 'Package is missing its OpenPGP signature.'
 	}
 
-	# Community boundary scan: no private module markers in package contents
-	$packageDir = Join-Path $fixture 'dist\com.pcln.hello-pcl-0.1.0'
-	$forbidden = @('Ultimate', 'TeamsEdition', 'DeveloperEdition', 'PRIVATE_API', 'BEGIN RSA PRIVATE KEY')
-	Get-ChildItem -Recurse -File $packageDir | ForEach-Object {
-		$content = Get-Content -Raw -ErrorAction SilentlyContinue $_.FullName
-		if (-not $content) { return }
+	$forbidden = @('Ultimate', 'TeamsEdition', 'DeveloperEdition', 'PRIVATE_API', 'BEGIN RSA PRIVATE KEY', 'BEGIN PGP PRIVATE KEY')
+	Get-ChildItem -LiteralPath $verifyDir -Recurse -File | ForEach-Object {
+		if ($_.Extension -notin @('.json', '.txt', '.md', '.axaml', '.asc')) { return }
+		$content = Get-Content -LiteralPath $_.FullName -Raw -ErrorAction SilentlyContinue
 		foreach ($token in $forbidden) {
-			if ($content -match [regex]::Escape($token)) {
+			if ($content -and $content.Contains($token, [StringComparison]::OrdinalIgnoreCase)) {
 				throw "Forbidden token '$token' found in $($_.FullName)"
 			}
 		}
 	}
-
-	Write-Host "M1 e2e passed: $package"
+	Write-Host "M1 e2e passed: $($package.FullName)"
 }
 finally {
 	Pop-Location
+	if (Test-Path -LiteralPath $verifyDir) {
+		Remove-Item -LiteralPath $verifyDir -Recurse -Force
+	}
 }

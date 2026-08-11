@@ -7,42 +7,30 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { PluginProject, validateManifestShape } from './project';
 
-const COLLECTION_NAME = 'pcl-community';
-
-/**
- * Maps structured analyzer / CLI diagnostics into the Problems panel.
- * Supported line format:
- *   path(line,col): error|warning|info PCLxxxx: message
- */
-const ANALYZER_LINE = /^(.*)\((\d+),(\d+)\):\s+(error|warning|info)\s+(PCL\d+):\s+(.*)$/i;
+const ANALYZER_LINE = /^(.*)\((\d+),(\d+)(?:,\d+,\d+)?\):\s+(error|warning|info)\s+(PNPSDK\d+|[A-Z]{2,}\d+):\s+(.*?)(?:\s+\[.*\])?$/i;
 
 export class PclDiagnosticController implements vscode.Disposable {
-	private readonly collection: vscode.DiagnosticCollection;
-	private readonly disposables: vscode.Disposable[] = [];
-
-	constructor() {
-		this.collection = vscode.languages.createDiagnosticCollection(COLLECTION_NAME);
-		this.disposables.push(this.collection);
-	}
+	private readonly collection = vscode.languages.createDiagnosticCollection('pcl-community');
 
 	refreshManifestProjects(projects: PluginProject[]): void {
 		this.collection.clear();
 		for (const project of projects) {
-			const errors = validateManifestShape(project.manifest);
-			const diagnostics = errors.map(message => {
-				const range = new vscode.Range(0, 0, 0, 1);
-				const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
-				diagnostic.source = 'pcl-manifest';
-				diagnostic.code = 'PCL0001';
+			const diagnostics = validateManifestShape(project.manifest).map(message => {
+				const diagnostic = new vscode.Diagnostic(
+					new vscode.Range(0, 0, 0, 1),
+					message,
+					vscode.DiagnosticSeverity.Error,
+				);
+				diagnostic.source = 'Public PNPSDK manifest';
+				diagnostic.code = 'PNPSDK-MANIFEST';
 				return diagnostic;
 			});
 			this.collection.set(vscode.Uri.file(project.manifestPath), diagnostics);
 		}
 	}
 
-	applyCliOutput(projectRoot: string, combinedOutput: string): void {
+	applyBuildOutput(projectRoot: string, combinedOutput: string): void {
 		const byFile = new Map<string, vscode.Diagnostic[]>();
-
 		for (const line of combinedOutput.split(/\r?\n/)) {
 			const match = ANALYZER_LINE.exec(line.trim());
 			if (!match) {
@@ -62,21 +50,18 @@ export class PclDiagnosticController implements vscode.Disposable {
 				message,
 				severity,
 			);
-			diagnostic.source = 'pcl-analyzer';
+			diagnostic.source = code.toUpperCase().startsWith('PNPSDK') ? 'PNPSDK Analyzer' : '.NET';
 			diagnostic.code = code;
 			const list = byFile.get(absolute) ?? [];
 			list.push(diagnostic);
 			byFile.set(absolute, list);
 		}
-
 		for (const [file, diagnostics] of byFile) {
 			this.collection.set(vscode.Uri.file(file), diagnostics);
 		}
 	}
 
 	dispose(): void {
-		for (const d of this.disposables) {
-			d.dispose();
-		}
+		this.collection.dispose();
 	}
 }

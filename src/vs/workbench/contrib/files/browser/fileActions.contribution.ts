@@ -677,13 +677,23 @@ for (const menuId of [MenuId.EmptyEditorGroupContext, MenuId.EditorTabsBarContex
 
 // File menu
 
+// Community Edition primary new entry: Plugin project (handled by pcl-community extension).
+MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
+	group: '1_new',
+	command: {
+		id: 'pcl.community.createProject',
+		title: nls.localize({ key: 'miNewPluginProject', comment: ['&& denotes a mnemonic'] }, "&&New Plugin Project")
+	},
+	order: 1
+});
+
 MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {
 	group: '1_new',
 	command: {
 		id: NEW_UNTITLED_FILE_COMMAND_ID,
-		title: nls.localize({ key: 'miNewFile', comment: ['&& denotes a mnemonic'] }, "&&New Text File")
+		title: nls.localize({ key: 'miNewFile', comment: ['&& denotes a mnemonic'] }, "New &&File")
 	},
-	order: 1
+	order: 2
 });
 
 MenuRegistry.appendMenuItem(MenuId.MenubarFileMenu, {

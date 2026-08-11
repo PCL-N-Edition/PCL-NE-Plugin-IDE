@@ -48,7 +48,7 @@ function code() {
 		DISABLE_TEST_EXTENSION=""
 	fi
 
-	# Launch Code
+	# Launch Community IDE (product.json keeps its profile separate from VS Code)
 	exec "$CODE" . $DISABLE_TEST_EXTENSION "$@"
 }
 

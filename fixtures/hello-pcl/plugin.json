@@ -1,0 +1,85 @@
+{
+	"formatVersion": 1,
+	"manifestVersion": 1,
+	"id": "com.pcln.hello-pcl",
+	"name": "Hello PCL",
+	"version": "0.1.0",
+	"channel": "alpha",
+	"summary": "Community Edition M1 fixture built against PCL N Plugin SDK.",
+	"publisher": {
+		"id": "github:PCL-N-Edition",
+		"namespace": "com.pcln"
+	},
+	"license": "MIT",
+	"entryPoint": {
+		"assembly": "lib/net10.0/HelloPcl.dll",
+		"type": "HelloPcl.HelloPlugin"
+	},
+	"api": {
+		"minimum": "0.1",
+		"maximumExclusive": "1.0"
+	},
+	"host": {
+		"minimumVersion": "0.1.0"
+	},
+	"services": {
+		"required": {
+			"pcl.commands": ">=0.1 <1.0",
+			"pcl.ui": ">=0.1 <1.0"
+		}
+	},
+	"permissions": [
+		{
+			"id": "ui.inject",
+			"reason": "Display the sample Hello panel."
+		}
+	],
+	"localization": {
+		"defaultCulture": "zh-CN",
+		"supportedCultures": [
+			"zh-CN",
+			"en-US"
+		],
+		"resourcePath": "locales/{culture}.json"
+	},
+	"ui": {
+		"api": {
+			"minimum": "0.1",
+			"maximumExclusive": "1.0"
+		},
+		"avalonia": {
+			"minimum": "12.0",
+			"maximumExclusive": "13.0"
+		},
+		"targets": [
+			{
+				"target": "pcl.page.launch",
+				"surface": ">=3.0.0 <4.0.0",
+				"access": [
+					"inject"
+				],
+				"operations": [
+					{
+						"id": "hello-panel",
+						"kind": "inject",
+						"slot": "cards.flip",
+						"axaml": "ui/HelloPanel.axaml",
+						"command": "com.pcln.hello-pcl.say-hello",
+						"required": true,
+						"fallback": "disable-feature"
+					}
+				]
+			}
+		]
+	},
+	"signing": {
+		"fingerprint": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+	},
+	"categories": [
+		"tools"
+	],
+	"tags": [
+		"example",
+		"community"
+	]
+}

@@ -48,7 +48,13 @@ import { GitHubPaths, IDefaultAccountService } from '../../../../../platform/def
 import product from '../../../../../platform/product/common/product.js';
 import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
 
-const defaultChat = product.defaultChatAgent;
+const defaultChat = product.defaultChatAgent ?? {
+	completionsEnablementSetting: 'github.copilot.enable',
+	nextEditSuggestionsSetting: 'github.copilot.nextEditSuggestions.enabled',
+	termsStatementUrl: '',
+	privacyStatementUrl: '',
+	provider: { default: { id: '', name: '' }, enterprise: { id: '', name: '' }, google: { id: '', name: '' }, apple: { id: '', name: '' } },
+} as NonNullable<typeof product.defaultChatAgent>;
 const completionsConfigurationTargets = [
 	ConfigurationTarget.WORKSPACE_FOLDER,
 	ConfigurationTarget.WORKSPACE,
@@ -596,21 +602,32 @@ export class ChatStatusDashboard extends DomWidget {
 
 		let descriptionText: string | MarkdownString;
 		let descriptionClass = '.description';
-		if (newUser && anonymousUser) {
+		if (newUser && anonymousUser && product.defaultChatAgent) {
 			descriptionText = new MarkdownString(localize({ key: 'activeDescriptionAnonymous', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", defaultChat.provider.default.name, defaultChat.provider.default.name, defaultChat.termsStatementUrl, defaultChat.privacyStatementUrl), { isTrusted: true });
 			descriptionClass = `${descriptionClass}.terms`;
 		} else if (newUser) {
-			descriptionText = localize('activateDescription', "Set up Copilot to use AI features.");
+			descriptionText = product.defaultChatAgent
+				? localize('activateDescription', "Set up Copilot to use AI features.")
+				: localize('activateDescriptionOpenCode', "Use OpenCode agents for AI features. The OpenCode CLI is installed automatically if missing.");
 		} else if (anonymousUser) {
-			descriptionText = localize('enableMoreDescription', "Sign in to enable more Copilot AI features.");
+			descriptionText = product.defaultChatAgent
+				? localize('enableMoreDescription', "Sign in to enable more Copilot AI features.")
+				: localize('enableMoreDescriptionOpenCode', "Configure an OpenCode model provider to enable AI agent features.");
 		} else if (disabled) {
-			descriptionText = localize('enableDescription', "Enable Copilot to use AI features.");
+			descriptionText = product.defaultChatAgent
+				? localize('enableDescription', "Enable Copilot to use AI features.")
+				: localize('enableDescriptionOpenCode', "Enable AI agent features (OpenCode).");
 		} else {
-			descriptionText = localize('signInDescription', "Sign in to use GitHub Copilot AI features.");
+			descriptionText = product.defaultChatAgent
+				? localize('signInDescription', "Sign in to use GitHub Copilot AI features.")
+				: localize('signInDescriptionOpenCode', "Start an OpenCode agent session to use AI features.");
 		}
 
 		let buttonLabel: string;
-		if (newUser) {
+		if (!product.defaultChatAgent) {
+			// Community Edition: OpenCode is the AI surface — never Copilot sign-in.
+			buttonLabel = localize('openOpenCodeAgent', "Open OpenCode Agent");
+		} else if (newUser) {
 			buttonLabel = localize('enableAIFeatures', "Use AI Features");
 		} else if (anonymousUser) {
 			buttonLabel = localize('enableMoreAIFeatures', "Enable more AI Features");
@@ -621,7 +638,10 @@ export class ChatStatusDashboard extends DomWidget {
 		}
 
 		let commandId: string;
-		if (newUser && anonymousUser) {
+		if (!product.defaultChatAgent) {
+			// Prefer OpenCode host session; falls back if dynamic command not ready.
+			commandId = 'workbench.action.chat.openNewSessionSidebar.agent-host-opencode';
+		} else if (newUser && anonymousUser) {
 			commandId = 'workbench.action.chat.triggerSetupAnonymousWithoutDialog';
 		} else {
 			commandId = 'workbench.action.chat.triggerSetup';

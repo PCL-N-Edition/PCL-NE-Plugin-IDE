@@ -44,24 +44,31 @@ export namespace ThemeSettingDefaults {
 	export const COLOR_THEME_HC_DARK = 'Default High Contrast';
 	export const COLOR_THEME_HC_LIGHT = 'Default High Contrast Light';
 
-	export const FILE_ICON_THEME = 'vs-seti';
+	/** Community Edition defaults to the experimental modern file-icon set. */
+	export const FILE_ICON_THEME = 'vscode-modern-icons';
 	export const PRODUCT_ICON_THEME = 'Default';
 }
 
 /**
  * Migrates legacy theme settings IDs to their current equivalents.
- * Theme IDs were simplified: "Default" prefix was removed from built-in themes,
- * and "Experimental" prefix was replaced when VS Code themes became GA.
+ * Community Edition only ships VS 2026 color themes (+ high contrast), so
+ * older Modern/Dark+/VS labels resolve to Dark/Light 2026.
  */
 export function migrateThemeSettingsId(settingsId: string): string {
 	switch (settingsId) {
-		case 'Default Dark Modern': return 'Dark Modern';
-		case 'Default Light Modern': return 'Light Modern';
-		case 'Default Dark+': return 'Dark+';
-		case 'Default Light+': return 'Light+';
+		case 'Default Dark Modern':
+		case 'Dark Modern':
+		case 'Default Dark+':
+		case 'Dark+':
+		case 'Visual Studio Dark':
 		case 'Experimental Dark':
 		case 'VS Code Dark':
 			return ThemeSettingDefaults.COLOR_THEME_DARK;
+		case 'Default Light Modern':
+		case 'Light Modern':
+		case 'Default Light+':
+		case 'Light+':
+		case 'Visual Studio Light':
 		case 'Experimental Light':
 		case 'VS Code Light':
 			return ThemeSettingDefaults.COLOR_THEME_LIGHT;

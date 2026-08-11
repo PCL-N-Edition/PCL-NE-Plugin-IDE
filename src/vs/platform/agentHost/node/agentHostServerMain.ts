@@ -35,7 +35,6 @@ import { InstantiationService } from '../../instantiation/common/instantiationSe
 import { ServiceCollection } from '../../instantiation/common/serviceCollection.js';
 import { registerAgentHostNetworkServices } from './agentHostBootstrap.js';
 import { BANG_COMMAND_PREFIX } from './agentHostBangCommand.js';
-import { CopilotAgent } from './copilot/copilotAgent.js';
 import { INetworkDiagnosticsService, NetworkDiagnosticsService } from './networkDiagnosticsService.js';
 import { IByokLmBridgeRegistry, NullByokLmBridgeRegistry } from './byokLmBridgeRegistry.js';
 import { IByokLmProxyService, NullByokLmProxyService } from './copilot/byokLmProxyService.js';
@@ -314,13 +313,11 @@ async function main(): Promise<void> {
 		const agentHostOTelService = disposables.add(instantiationService.createInstance(AgentHostOTelService, fetchFn));
 		diServices.set(IAgentHostOTelService, agentHostOTelService);
 		// BYOK is unsupported in the remote agent host (no extension host runs
-		// next to it to serve the renderer LM API). Inject null implementations
-		// to satisfy CopilotAgent / CopilotSessionLauncher DI.
+		// next to it to serve the renderer LM API). Inject null implementations.
 		diServices.set(IByokLmBridgeRegistry, new NullByokLmBridgeRegistry());
 		diServices.set(IByokLmProxyService, new NullByokLmProxyService());
-		const copilotAgent = disposables.add(instantiationService.createInstance(CopilotAgent));
-		agentService.registerProvider(copilotAgent);
-		log('CopilotAgent registered');
+
+		// Community Edition does not register a built-in Copilot agent provider.
 		// Claude and Codex providers are gated on two things:
 		//  1. The user-facing enable toggle (`chat.agentHost.<x>Agent.enabled`,
 		//     forwarded as an env var by the renderer-side starters; the remote

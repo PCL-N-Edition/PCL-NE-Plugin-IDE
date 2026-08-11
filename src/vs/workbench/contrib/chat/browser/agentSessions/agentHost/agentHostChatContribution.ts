@@ -26,6 +26,7 @@ import { IWorkbenchContribution } from '../../../../../common/contributions.js';
 import { IAgentHostFileSystemService } from '../../../../../services/agentHost/common/agentHostFileSystemService.js';
 import { IAuthenticationService } from '../../../../../services/authentication/common/authentication.js';
 import { IWorkbenchEnvironmentService } from '../../../../../services/environment/common/environmentService.js';
+import { IProductService } from '../../../../../../platform/product/common/productService.js';
 import { ChatSessionsExtensions, IAsyncChatSessionActivationRegistry, IChatSessionsService, isLocalAgentHostTarget } from '../../../common/chatSessionsService.js';
 import { ICustomizationHarnessService } from '../../../common/customizationHarnessService.js';
 import { ILanguageModelsService } from '../../../common/languageModels.js';
@@ -137,6 +138,7 @@ export class AgentHostContribution extends Disposable implements IWorkbenchContr
 		@IAgentHostActiveClientService private readonly _activeClientService: IAgentHostActiveClientService,
 		@IAgentHostProtectedResourcesService private readonly _protectedResourcesService: IAgentHostProtectedResourcesService,
 		@IAgentHostEnablementService agentHostEnablementService: IAgentHostEnablementService,
+		@IProductService private readonly _productService: IProductService,
 	) {
 		super();
 		this._isSessionsWindow = environmentService.isSessionsWindow;
@@ -248,24 +250,27 @@ export class AgentHostContribution extends Disposable implements IWorkbenchContr
 		// Keep the delegation picker available for local agent host sessions in
 		// both VS Code and the Agents app so users can hand off (continue) their
 		// conversation to any other agent host session or remote target.
+		const shipsCopilotProduct = !!this._productService.defaultChatAgent;
 		store.add(this._chatSessionsService.registerChatSessionContribution({
 			type: sessionType,
 			name: agentId,
 			displayName: agent.displayName,
 			description: agent.description,
-			customAgentTarget: this._isSessionsWindow ? undefined : Target.GitHubCopilot,
+			// Community Edition (no defaultChatAgent) must not target GitHub Copilot for custom agents.
+			customAgentTarget: (this._isSessionsWindow || !shipsCopilotProduct) ? undefined : Target.GitHubCopilot,
 			canDelegate: true,
 			requiresCustomModels: true,
 			supportsAutoModel: agentHostProviderSupportsAutoModel(agent.provider),
 			// Derived live from the agent's currently-advertised protected resources
-			// (via the protected-resources service): an agent that marks the GitHub
-			// Copilot resource `required: false` (Claude in native mode, Codex on
-			// OpenAI) is usable without signing in. Falls back to "required" until the
-			// agent host resolves. The paired `onDidChangeRequiresCopilotSignIn` lets
-			// the sessions service re-evaluate this when the set changes.
+			// (via the protected-resources service). OpenCode advertises none, so no
+			// GitHub sign-in. Until the host resolves, Community falls back to false
+			// (do not force Copilot setup UI).
 			requiresCopilotSignIn: () => {
 				const resources = this._protectedResourcesService.getProtectedResources(agent.provider);
-				return resources !== undefined ? protectedResourcesRequireGitHubCopilotSignIn(resources) : true;
+				if (resources !== undefined) {
+					return protectedResourcesRequireGitHubCopilotSignIn(resources);
+				}
+				return shipsCopilotProduct;
 			},
 			onDidChangeRequiresCopilotSignIn: Event.signal(Event.filter(this._protectedResourcesService.onDidChange, provider => provider === agent.provider, store)),
 			agentHostProviderId: agent.provider,

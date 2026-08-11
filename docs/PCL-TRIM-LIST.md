@@ -1,71 +1,68 @@
-# Community Edition — keep / stop-packaging / delete list
+# Community Edition — packaging and feature boundary
 
-Policy (from the Community plan): **stop packaging first**, retain upstream source when that reduces sync cost, **physically delete** only after dependency impact is understood.
+Last audited: 2026-08-11 (M0–M1 release pass).
 
-Last audit: 2026-08-09 (M0 completion pass).
+Community uses an explicit allowlist. A new upstream built-in extension is not shipped merely because it appears under `extensions/`.
 
-## Product surface (ship)
+## Product surface kept
 
-| Area | Decision | Notes |
-|---|---|---|
-| Editor / workbench / Extension Host | **Keep** | Code - OSS foundation |
-| Terminal, SCM/Git, Debug UI, Testing UI, Search, Problems, Output | **Keep** | Plugin development basics |
-| New UI themes (`Dark 2026`, `Light 2026`, High Contrast) | **Keep** | Default Community UI |
-| `theme-defaults`, `theme-modern-icons`, `theme-seti`, solarized themes | **Keep** | Accessibility + modern icons |
-| C# grammar (`extensions/csharp`) | **Keep** | Language baseline; full Roslyn LS tracked under ADR-002 |
-| XML / YAML / JSON / Markdown / JS/TS / PowerShell / Shell / HTML / CSS / Diff / Log / Dotenv / Ini | **Keep** | Manifest, docs, scripts, config |
-| `pcl-community` built-in extension | **Keep** | M1 project/build/package tooling |
-| GitHub + authentication extensions | **Keep (packaged)** | Issue reporting / optional auth; no Copilot |
-| Emmet, media-preview, merge-conflict, references-view, search-result, simple-browser, npm, configuration-editing, extension-editing, debug-auto-launch, debug-server-ready, terminal-suggest | **Keep** | General IDE quality |
-
-## Stop packaging (sources may remain)
-
-Configured in `build/lib/extensions.ts` → `excludedExtensions`.
-
-| Extension group | Decision | Rationale |
-|---|---|---|
-| `copilot` | **Stop + deleted sources** | Not part of Community product |
-| Notebooks (`ipynb`, `notebook-renderers`) | **Stop packaging** | Not required for PCL-N plugins |
-| Unneeded languages (Python, Java, Go, Rust, …) | **Stop packaging** | C# / XML / JSON focused IDE |
-| `grunt` / `gulp` / `jake` | **Stop packaging** | Rare for PCL-N plugin workflows |
-| `tunnel-forwarding` | **Stop packaging** | Tunnel product surface not Community-critical |
-| `mermaid-markdown-features`, `prompt-basics` | **Stop packaging** | Agent/docs adjacent; not required |
-| Legacy color themes (abyss, monokai, …) | **Stop packaging** | New UI only |
-| Test-only extensions | **Stop packaging** | Dev/test only |
-
-## Deleted / no-op
-
-| Path / feature | Status |
+| Area | Decision |
 |---|---|
-| `extensions/copilot/**` | **Deleted** from the tree |
-| GitHub Actions: `chat-*`, `copilot-setup-steps`, `sessions-e2e` | **Deleted** |
-| Azure `product-copilot*.yml` and `build/azure-pipelines/copilot/**` | **Deleted** |
-| `downloadCopilotVsix.ts` | **No-op stub** for residual pipeline references |
-| About dialog Copilot version lines | **Removed** |
+| Editor, workbench, Extension Host | Keep |
+| Explorer, Search, Problems, Output | Keep |
+| Terminal, Tasks, SCM/Git | Keep |
+| Debug and Testing foundations | Keep for current and later PCL adapters |
+| Webview and Custom Editor foundations | Keep for M3 authoring tools |
+| Modern floating-panel UI | Always enabled; user toggle removed |
+| Themes | Dark 2026, Light 2026, and High Contrast only |
+| File icons | Modern icon theme with PCL/.NET mappings |
+| `pcl-community` | Keep; owns M1 project and Public PNPSDK workflow |
 
-## Deferred (source retained for upstream sync)
+## Built-in extension allowlist
 
-| Area | Status | Follow-up |
-|---|---|---|
-| `src/vs/workbench/contrib/chat/**` | Source remains; no Community `defaultChatAgent` product config | Evaluate feature-gating / later delete after isolation |
-| `src/vs/platform/agentHost/**` | Source remains; depends on npm agent SDKs for compile | ADR for full agent stack removal |
-| `@github/copilot*` npm dependencies | Still present for agentHost compile graph | Remove when agentHost is excised or stubbed |
-| Microsoft Marketplace gallery endpoints | Not configured in Community `product.json` | Keep unset |
-| Telemetry | `enableTelemetry: false` in `product.json` | Confirm runtime honors flags on all platforms |
+The canonical list lives in `build/lib/extensions.ts` and currently contains 26 entries:
 
-## Authentication / update / tunnel audit
+```text
+configuration-editing  csharp                    debug-auto-launch
+debug-server-ready     diff                      dotenv
+git                    git-base                  ini
+json                   json-language-features    log
+markdown-basics        markdown-language-features media-preview
+merge-conflict         pcl-community             powershell
+references-view        search-result             shellscript
+terminal-suggest       theme-defaults            theme-modern-icons
+xml                    yaml
+```
 
-| Endpoint / system | Community stance |
+The build, npm, and media packaging lists are derived from this boundary. Community CI checks the product identity, M1 extension/schema, lack of a configured gallery/default chat agent, and absence of Copilot production dependencies or assets.
+
+## Removed from the product
+
+| Area | Status |
 |---|---|
-| VS Marketplace | Not configured — Community does not promise Marketplace access |
-| Update channel | Not yet configured (M4) |
-| Tunnel application names | Present as identifiers only; tunnel extension not packaged |
-| Telemetry | Disabled by product configuration |
-| Report issue URL | Points at this GitHub repository |
+| `extensions/copilot/**` | Deleted |
+| Copilot build/download/package tasks | Deleted |
+| GitHub auth/GitHub product extensions | Not packaged |
+| Chat view, Agent sessions view/window, title-bar Agent control, Chat auxiliary bar | Not registered |
+| AI account/status entries and Agent welcome page | Not registered |
+| Notebook, tunnel, remote-development, browser preview, Emmet, npm, extension-authoring, and unrelated language extensions | Not packaged |
+| Legacy color/file-icon themes | Not packaged |
+| VS Marketplace | Not configured; Extensions shows and searches local extensions |
+| Telemetry | Disabled in `product.json` |
+
+## Source retained only for upstream compatibility
+
+Some Code - OSS Chat, MCP, Agent Host, and sessions source remains because editor/notebook service graphs still reference its service contracts. It has no Community navigation, view, status, account, default agent, process registration, or packaged Copilot extension.
+
+`@github/copilot`, `@github/copilot-sdk`, and `@vscode/copilot-api` remain development-only type/compile dependencies for that retained upstream graph. They are not production dependencies and are not copied into the Community application package.
+
+## Explorer defaults for PCL projects
+
+The `pcl-community` built-in defaults `files.exclude` for generated directories (`bin`, `obj`, `dist`) and project metadata (`*.csproj`, `*.slnx`, `*.nplug`, `*.config`). Source, AXAML, localization resources, `plugin.json`, and documentation remain visible. Users can override the setting.
 
 ## Re-audit triggers
 
-- Upstream major merge
-- Adding a new built-in extension
-- Introducing network endpoints (Registry, Sidecar, update)
-- Any request to re-enable Chat/Agent UI
+- Upstream baseline update
+- Any built-in extension allowlist change
+- New online endpoint, update channel, Registry, or Sidecar integration
+- Any request to re-enable an AI/Agent UI surface

@@ -15,17 +15,15 @@ import { safeStringify } from '../../../../../base/common/objects.js';
 import { derived, IObservable, observableSignalFromEvent } from '../../../../../base/common/observable.js';
 import { ThemeIcon } from '../../../../../base/common/themables.js';
 import { URI, UriComponents } from '../../../../../base/common/uri.js';
-import { localize } from '../../../../../nls.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { ILogService, LogLevel } from '../../../../../platform/log/common/log.js';
 import { IProductService } from '../../../../../platform/product/common/productService.js';
-import { Registry } from '../../../../../platform/registry/common/platform.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { IWorkspaceTrustManagementService } from '../../../../../platform/workspace/common/workspaceTrust.js';
 import { IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
 import { ILifecycleService } from '../../../../services/lifecycle/common/lifecycle.js';
-import { Extensions, IOutputChannelRegistry, IOutputService } from '../../../../services/output/common/output.js';
+import { IOutputService } from '../../../../services/output/common/output.js';
 import { ChatSessionStatus as AgentSessionStatus, IChatSessionFileChange, IChatSessionFileChange2, IChatSessionItem, IChatSessionsService, isSessionInProgressStatus, ResolvedChatSessionsExtensionPoint } from '../../common/chatSessionsService.js';
 import { getChatSessionType } from '../../common/model/chatUri.js';
 import { IChatWidgetService } from '../chat.js';
@@ -316,7 +314,6 @@ export function isMarshalledAgentSessionContext(thing: unknown): thing is IMarsh
 //#region Sessions Logger
 
 const agentSessionsOutputChannelId = 'agentSessionsOutput';
-const agentSessionsOutputChannelLabel = localize('agentSessionsOutput', "Agent Sessions");
 
 function statusToString(status: AgentSessionStatus): string {
 	switch (status) {
@@ -330,8 +327,6 @@ function statusToString(status: AgentSessionStatus): string {
 
 class AgentSessionsLogger extends Disposable {
 
-	private isChannelRegistered = false;
-
 	constructor(
 		private readonly getSessionsData: () => {
 			sessions: Iterable<IInternalAgentSession>;
@@ -339,28 +334,10 @@ class AgentSessionsLogger extends Disposable {
 		},
 		@ILogService private readonly logService: ILogService,
 		@IOutputService private readonly outputService: IOutputService,
-		@IChatEntitlementService private readonly chatEntitlementService: IChatEntitlementService
 	) {
 		super();
 
-		this.updateChannelRegistration();
 		this.registerListeners();
-	}
-
-	private updateChannelRegistration(): void {
-		const chatDisabled = this.chatEntitlementService.sentiment.hidden;
-
-		if (chatDisabled && this.isChannelRegistered) {
-			Registry.as<IOutputChannelRegistry>(Extensions.OutputChannels).removeChannel(agentSessionsOutputChannelId);
-			this.isChannelRegistered = false;
-		} else if (!chatDisabled && !this.isChannelRegistered) {
-			Registry.as<IOutputChannelRegistry>(Extensions.OutputChannels).registerChannel({
-				id: agentSessionsOutputChannelId,
-				label: agentSessionsOutputChannelLabel,
-				log: false
-			});
-			this.isChannelRegistered = true;
-		}
 	}
 
 	private registerListeners(): void {
@@ -368,10 +345,6 @@ class AgentSessionsLogger extends Disposable {
 			if (level === LogLevel.Trace) {
 				this.logAllStatsIfTrace('Log level changed to trace');
 			}
-		}));
-
-		this._register(this.chatEntitlementService.onDidChangeSentiment(() => {
-			this.updateChannelRegistration();
 		}));
 	}
 

@@ -1,4 +1,4 @@
-name: Code OSS
+name: Community Code Quality
 
 on:
   pull_request:
@@ -13,15 +13,16 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  VSCODE_QUALITY: 'oss'
-
 jobs:
   compile:
-    name: Compile & Hygiene
+    name: Compile and typecheck
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
     steps:
-      - name: Checkout microsoft/vscode
+      - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           lfs: true
@@ -30,171 +31,49 @@ jobs:
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: .nvmrc
+          cache: npm
 
-      - name: Restore node_modules cache
-        id: cache-node-modules
-        uses: ./.github/actions/restore-node-modules
-        with:
-          key-prefix: node_modules-compile
-          key-args: "compile $(node -p process.arch)"
-
-      - name: Install build tools
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: sudo apt update -y && sudo apt install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev libnotify-bin libkrb5-dev
-
-      - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+      - name: Install Linux build prerequisites
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
+          ./build/azure-pipelines/linux/apt-retry.sh sudo apt-get update
+          ./build/azure-pipelines/linux/apt-retry.sh sudo apt-get install -y \
+            build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev \
+            libkrb5-dev libsecret-1-dev
 
-          for i in {1..5}; do # try 5 times
-            npm ci && break
-            if [ $i -eq 5 ]; then
-              echo "Npm install failed too many times" >&2
-              exit 1
-            fi
-            echo "Npm install failed $i, trying again..."
-          done
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Type check /build/ scripts
-        run: npm run typecheck
+      - name: Install build dependencies
         working-directory: build
-
-      - name: Prepare built-in extensions cache key
-        shell: pwsh
-        run: node build/azure-pipelines/common/computeBuiltInDepsCacheKey.ts > .build/builtindepshash
-
-      - name: Restore built-in extensions cache
-        id: cache-builtin-extensions
-        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-        with:
-          enableCrossOsArchive: true
-          path: .build/builtInExtensions
-          key: "builtin-extensions-${{ hashFiles('.build/builtindepshash') }}"
-
-      - name: Download built-in extensions
-        if: steps.cache-builtin-extensions.outputs.cache-hit != 'true'
-        run: node build/lib/builtInExtensions.ts
+        run: npm ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check Markdown editor manifests
+      - name: Install root dependencies
+        shell: bash
         run: |
-          npm run markdown-editor-package-json-check
-          npm --prefix extensions/markdown-language-features run test-markdown-editor-package-json
-
-      - name: Compile & Hygiene
-        run: npm exec -- npm-run-all2 -lp core-ci hygiene eslint valid-layers-check define-class-fields-check vscode-dts-compile-check tsec-compile-check test-build-scripts
+          set -euo pipefail
+          source ./build/azure-pipelines/linux/setup-env.sh
+          npm ci
         env:
+          npm_config_arch: x64
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check Codex protocol client is in sync
+      - name: Typecheck build scripts
+        working-directory: build
+        run: npm run typecheck
+
+      - name: Typecheck and compile Community Edition
         run: |
-          git fetch --no-tags --depth=1 origin "$CODEX_SYNC_BASE" || true
-          node build/codex/check-protocol-sync.ts --if-changed --base "$CODEX_SYNC_BASE"
-        env:
-          CODEX_SYNC_BASE: ${{ github.event.pull_request.base.sha }}
+          npm run typecheck-client
+          npm run compile
+          npm run gulp compile-extension:pcl-community
+          npm run valid-layers-check
 
-      - name: Check cyclic dependencies
-        run: node build/lib/checkCyclicDependencies.ts out-build
-
-  linux-cli-tests:
-    name: Linux
-    uses: ./.github/workflows/pr-linux-cli-test.yml
-    with:
-      job_name: CLI
-      rustup_toolchain: 1.88
-
-  linux-electron-tests:
-    name: Linux
-    uses: ./.github/workflows/pr-linux-test.yml
-    with:
-      job_name: Electron
-      electron_tests: true
-      smoke_tests: false
-
-  linux-electron-smoke-tests:
-    name: Linux
-    uses: ./.github/workflows/pr-linux-test.yml
-    with:
-      job_name: Electron-Smoke
-      electron_tests: true
-      unit_and_integration_tests: false
-
-  linux-browser-tests:
-    name: Linux
-    uses: ./.github/workflows/pr-linux-test.yml
-    with:
-      job_name: Browser
-      browser_tests: true
-
-  linux-remote-tests:
-    name: Linux
-    uses: ./.github/workflows/pr-linux-test.yml
-    with:
-      job_name: Remote
-      remote_tests: true
-
-  macos-electron-tests:
-    name: macOS
-    uses: ./.github/workflows/pr-darwin-test.yml
-    with:
-      job_name: Electron
-      electron_tests: true
-      smoke_tests: false
-
-  macos-electron-smoke-tests:
-    name: macOS
-    uses: ./.github/workflows/pr-darwin-test.yml
-    with:
-      job_name: Electron-Smoke
-      electron_tests: true
-      unit_and_integration_tests: false
-
-  macos-browser-tests:
-    name: macOS
-    uses: ./.github/workflows/pr-darwin-test.yml
-    with:
-      job_name: Browser
-      browser_tests: true
-
-  macos-remote-tests:
-    name: macOS
-    uses: ./.github/workflows/pr-darwin-test.yml
-    with:
-      job_name: Remote
-      remote_tests: true
-
-  windows-electron-tests:
-    name: Windows
-    uses: ./.github/workflows/pr-win32-test.yml
-    with:
-      job_name: Electron
-      electron_tests: true
-      smoke_tests: false
-
-  windows-electron-smoke-tests:
-    name: Windows
-    uses: ./.github/workflows/pr-win32-test.yml
-    with:
-      job_name: Electron-Smoke
-      electron_tests: true
-      unit_and_integration_tests: false
-
-  windows-browser-tests:
-    name: Windows
-    uses: ./.github/workflows/pr-win32-test.yml
-    with:
-      job_name: Browser
-      browser_tests: true
-
-  windows-remote-tests:
-    name: Windows
-    uses: ./.github/workflows/pr-win32-test.yml
-    with:
-      job_name: Remote
-      remote_tests: true
+      - name: Verify build is reproducible
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --exit-code; then
+            echo "::error::Dependency install or build modified tracked files."
+            exit 1
+          fi

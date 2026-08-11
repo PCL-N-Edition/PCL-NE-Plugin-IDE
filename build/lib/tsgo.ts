@@ -42,6 +42,12 @@ export function spawnTsgo(projectPath: string, config: { taskName: string; noEmi
 	}
 	const child = cp.spawn(process.execPath, args, {
 		cwd: root,
+		// TypeScript Native emits files in parallel. On Windows the default Go
+		// scheduler can create enough concurrent sourcemap work to exhaust the
+		// system commit limit before the heap is collected. Keep builds stable on
+		// developer machines and hosted runners while still allowing callers to
+		// opt into a different limit.
+		env: { ...process.env, GOMAXPROCS: process.env['GOMAXPROCS'] || '4' },
 		stdio: ['ignore', 'pipe', 'pipe']
 	});
 

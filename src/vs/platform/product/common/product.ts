@@ -74,34 +74,26 @@ else {
 	// eslint-disable-next-line local/code-no-dangerous-type-assertions
 	product = { /*BUILD->INSERT_PRODUCT_CONFIGURATION*/ } as unknown as IProductConfiguration;
 
-	// Running out of sources
+	// Running out of sources without injected product.json (must not use VS Code / Copilot defaults).
 	if (Object.keys(product).length === 0) {
 		Object.assign(product, {
-			version: '1.104.0-dev',
-			nameShort: 'Code - OSS Dev',
-			nameLong: 'Code - OSS Dev',
-			applicationName: 'code-oss',
-			dataFolderName: '.vscode-oss',
-			urlProtocol: 'code-oss',
-			reportIssueUrl: 'https://github.com/microsoft/vscode/issues/new',
+			// Keep the VS Code API compatibility version independent from the
+			// Community release train (product.json.communityRelease).
+			version: '1.133.0',
+			communityRelease: '0.1.0-alpha',
+			upstreamVersion: '1.133.0',
+			nameShort: 'PCL NE Plugin IDE Dev',
+			nameLong: 'PCL NE Plugin IDE Community Edition Dev',
+			applicationName: 'pcl-ne-plugin-ide-community',
+			dataFolderName: '.pcl-ne-plugin-ide-community-dev',
+			sharedDataFolderName: '.pcl-ne-plugin-ide-community-shared-dev',
+			urlProtocol: 'pcl-ne-plugin-ide',
+			reportIssueUrl: 'https://github.com/PCL-N-Edition/PCL-NE-Plugin-IDE/issues/new/choose',
 			licenseName: 'MIT',
-			licenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt',
-			serverLicenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt',
-			defaultChatAgent: {
-				extensionId: 'GitHub.copilot',
-				chatExtensionId: 'GitHub.copilot-chat',
-				provider: {
-					default: {
-						id: 'github',
-						name: 'GitHub',
-					},
-					enterprise: {
-						id: 'github-enterprise',
-						name: 'GitHub Enterprise',
-					}
-				},
-				providerScopes: []
-			}
+			licenseUrl: 'https://github.com/PCL-N-Edition/PCL-NE-Plugin-IDE/blob/main/LICENSE.txt',
+			serverLicenseUrl: 'https://github.com/PCL-N-Edition/PCL-NE-Plugin-IDE/blob/main/LICENSE.txt',
+			serverApplicationName: 'pcl-ne-plugin-ide-server',
+			// Intentionally no defaultChatAgent — Community Edition does not ship Copilot.
 		});
 	}
 }

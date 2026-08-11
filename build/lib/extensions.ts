@@ -312,79 +312,40 @@ export function fromGithub({ name, version, repo, sha256, metadata }: IExtension
  */
 const nativeExtensions = [
 	'git',
-	'microsoft-authentication',
 ];
 
 /**
- * Extensions that exist in the tree for upstream sync / tests but are not
- * shipped in Community Edition product builds.
- *
- * Policy: stop packaging first (this list), delete sources later when sync
- * cost and dependencies are well understood. See docs/PCL-TRIM-LIST.md.
+ * The complete Community Edition built-in extension surface. Packaging is
+ * allowlist-based so an upstream merge cannot silently add product features.
+ * Keep this list synchronized with docs/PCL-TRIM-LIST.md and CI validation.
  */
-const excludedExtensions = [
-	// Removed product features
-	'copilot',
-	// Language packs not required for PCL-N C# plugin development
-	'bat',
-	'clojure',
-	'coffeescript',
-	'cpp',
-	'dart',
-	'docker',
-	'fsharp',
-	'go',
-	'groovy',
-	'handlebars',
-	'hlsl',
-	'java',
-	'julia',
-	'latex',
-	'less',
-	'lua',
-	'make',
-	'objective-c',
-	'perl',
-	'php',
-	'php-language-features',
-	'pug',
-	'python',
-	'r',
-	'razor',
-	'restructuredtext',
-	'ruby',
-	'rust',
-	'scss',
-	'shaderlab',
-	'sql',
-	'swift',
-	'vb',
-	// Notebooks and agent-adjacent local extensions
-	'ipynb',
-	'notebook-renderers',
-	'mermaid-markdown-features',
-	'prompt-basics',
-	// Node task runners rarely used for PCL-N plugin workflows
-	'grunt',
-	'gulp',
-	'jake',
-	// Tunnel forwarding is not part of Community product surface
-	'tunnel-forwarding',
-	// Legacy optional color themes (new UI only: 2026 + HC + solarized kept via theme-defaults)
-	'theme-abyss',
-	'theme-kimbie-dark',
-	'theme-monokai',
-	'theme-monokai-dimmed',
-	'theme-quietlight',
-	'theme-red',
-	'theme-tomorrow-night-blue',
-	// Test-only
-	'vscode-api-tests',
-	'vscode-colorize-tests',
-	'vscode-colorize-perf-tests',
-	'vscode-test-resolver',
-	'ms-vscode.node-debug',
-	'ms-vscode.node-debug2',
+export const communityExtensions = [
+	'configuration-editing',
+	'csharp',
+	'debug-auto-launch',
+	'debug-server-ready',
+	'diff',
+	'dotenv',
+	'git',
+	'git-base',
+	'ini',
+	'json',
+	'json-language-features',
+	'log',
+	'markdown-basics',
+	'markdown-language-features',
+	'media-preview',
+	'merge-conflict',
+	'pcl-community',
+	'powershell',
+	'references-view',
+	'search-result',
+	'shellscript',
+	'terminal-suggest',
+	'theme-defaults',
+	'theme-modern-icons',
+	'xml',
+	'yaml',
 ];
 
 const marketplaceWebExtensionsExclude = new Set([
@@ -478,6 +439,7 @@ export function packageAllLocalExtensionsStream(forWeb: boolean, disableMangle: 
  */
 function doPackageLocalExtensionsStream(forWeb: boolean, disableMangle: boolean, native: boolean): Stream {
 	const nativeExtensionsSet = new Set(nativeExtensions);
+	const communityExtensionsSet = new Set<string>(communityExtensions);
 	const localExtensionsDescriptions = (
 		(glob.sync('extensions/*/package.json') as string[])
 			.map(manifestPath => {
@@ -486,8 +448,8 @@ function doPackageLocalExtensionsStream(forWeb: boolean, disableMangle: boolean,
 				const extensionName = path.basename(extensionPath);
 				return { name: extensionName, path: extensionPath, manifestPath: absoluteManifestPath };
 			})
+			.filter(({ name }) => communityExtensionsSet.has(name))
 			.filter(({ name }) => native ? nativeExtensionsSet.has(name) : !nativeExtensionsSet.has(name))
-			.filter(({ name }) => excludedExtensions.indexOf(name) === -1)
 			.filter(({ name }) => builtInExtensions.every(b => b.name !== name))
 			.filter(({ manifestPath }) => (forWeb ? isWebExtension(require(manifestPath)) : true))
 	);
@@ -524,14 +486,6 @@ function doPackageLocalExtensionsStream(forWeb: boolean, disableMangle: boolean,
 		result
 			.pipe(util2.setExecutableBit(['**/*.sh']))
 	);
-}
-
-/**
- * Community Edition does not ship the Copilot extension. Kept as an empty
- * stream so any residual task references fail closed without packaging content.
- */
-export function packageCopilotExtensionStream(_disableMangle: boolean): Stream {
-	return es.readArray([]);
 }
 
 export function packageMarketplaceExtensionsStream(forWeb: boolean): Stream {
@@ -670,14 +624,9 @@ export async function esbuildExtensions(taskName: string, isWatch: boolean, scri
 
 // Additional projects to run esbuild on. These typically build code for webviews
 const esbuildMediaScripts: { script: string; tsconfig: string }[] = [
-	{ script: 'ipynb/esbuild.notebook.mts', tsconfig: 'ipynb/notebook-src/tsconfig.json' },
 	{ script: 'markdown-language-features/esbuild.notebook.mts', tsconfig: 'markdown-language-features/notebook/tsconfig.json' },
 	{ script: 'markdown-language-features/esbuild.webview.mts', tsconfig: 'markdown-language-features/preview-src/tsconfig.json' },
 	{ script: 'markdown-language-features/esbuild.markdownEditor.mts', tsconfig: 'markdown-language-features/markdown-editor-src/tsconfig.json' },
-	{ script: 'markdown-math/esbuild.notebook.mts', tsconfig: 'markdown-math/notebook/tsconfig.json' },
-	{ script: 'mermaid-markdown-features/esbuild.webview.mts', tsconfig: 'mermaid-markdown-features/preview-src/tsconfig.json' },
-	{ script: 'notebook-renderers/esbuild.notebook.mts', tsconfig: 'notebook-renderers/tsconfig.json' },
-	{ script: 'simple-browser/esbuild.webview.mts', tsconfig: 'simple-browser/preview-src/tsconfig.json' },
 ];
 
 export function buildExtensionMedia(isWatch: boolean, outputRoot?: string): Promise<void> {

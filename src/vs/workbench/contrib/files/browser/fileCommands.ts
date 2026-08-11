@@ -691,8 +691,9 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	weight: KeybindingWeight.WorkbenchContrib,
 	when: null,
-	primary: isWeb ? (isWindows ? KeyChord(KeyMod.CtrlCmd | KeyCode.KeyK, KeyCode.KeyN) : KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyN) : KeyMod.CtrlCmd | KeyCode.KeyN,
-	secondary: isWeb ? [KeyMod.CtrlCmd | KeyCode.KeyN] : undefined,
+	// Community Edition: Ctrl/Cmd+N creates a Plugin project; Ctrl/Cmd+Shift+N creates a new file.
+	primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyN,
+	secondary: isWeb ? [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyN] : undefined,
 	id: NEW_UNTITLED_FILE_COMMAND_ID,
 	metadata: {
 		description: NEW_UNTITLED_FILE_LABEL,

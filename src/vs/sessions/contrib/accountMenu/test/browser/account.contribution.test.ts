@@ -8,6 +8,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/tes
 import { isIMenuItem, MenuRegistry } from '../../../../../platform/actions/common/actions.js';
 import { CommandsRegistry } from '../../../../../platform/commands/common/commands.js';
 import { ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
+import product from '../../../../../platform/product/common/product.js';
 import { CHAT_SETUP_ACTION_ID } from '../../../../../workbench/contrib/chat/browser/actions/chatActions.js';
 import { Menus } from '../../../../browser/menus.js';
 import { shouldShowAccountPanelSummary } from '../../browser/account.contribution.js';
@@ -16,16 +17,21 @@ suite('Sessions - Account Menu', () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('labels the signed-out Copilot account action', () => {
+	test('only contributes the signed-out agent action when the product ships one', () => {
 		const signIn = MenuRegistry.getMenuItems(Menus.AccountMenu)
 			.filter(isIMenuItem)
 			.find(item => item.command.id === 'workbench.action.agenticSignIn');
 
+		if (!product.defaultChatAgent) {
+			assert.strictEqual(signIn, undefined);
+			return;
+		}
 		assert.ok(signIn);
-		assert.strictEqual(typeof signIn.command.title === 'string' ? signIn.command.title : signIn.command.title.value, 'Sign in to use GitHub Copilot');
+		const title = typeof signIn.command.title === 'string' ? signIn.command.title : signIn.command.title.value;
+		assert.strictEqual(title, 'Sign in to use GitHub Copilot');
 	});
 
-	test('uses the shared Chat setup flow for Copilot sign-in', async () => {
+	test('routes the signed-out agent command to product setup', async () => {
 		const executedCommands: string[] = [];
 		const command = CommandsRegistry.getCommand('workbench.action.agenticSignIn');
 		assert.ok(command);

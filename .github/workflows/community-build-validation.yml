@@ -44,6 +44,30 @@ jobs:
           const scripts = pkg.scripts ?? {};
           const forbidden = [];
 
+          const expectedExtensions = [
+            'configuration-editing', 'csharp', 'debug-auto-launch', 'debug-server-ready',
+            'diff', 'dotenv', 'git', 'git-base', 'ini', 'json', 'json-language-features',
+            'log', 'markdown-basics', 'markdown-language-features', 'media-preview',
+            'merge-conflict', 'pcl-community', 'powershell', 'references-view',
+            'search-result', 'shellscript', 'terminal-suggest', 'theme-defaults',
+            'theme-modern-icons', 'xml', 'yaml'
+          ];
+          const extensionBuildSource = fs.readFileSync('build/lib/extensions.ts', 'utf8');
+          const allowlistBlock = extensionBuildSource.match(/export const communityExtensions = \[([\s\S]*?)\];/);
+          const actualExtensions = allowlistBlock ? [...allowlistBlock[1].matchAll(/'([^']+)'/g)].map(match => match[1]) : [];
+          if (JSON.stringify(actualExtensions) !== JSON.stringify(expectedExtensions)) {
+            console.error('Community built-in extension allowlist changed unexpectedly.');
+            console.error({ expectedExtensions, actualExtensions });
+            process.exit(1);
+          }
+
+          for (const dependency of ['@github/copilot', '@github/copilot-sdk', '@vscode/copilot-api']) {
+            if (pkg.dependencies?.[dependency]) {
+              console.error(`${dependency} must not be a Community production dependency.`);
+              process.exit(1);
+            }
+          }
+
           for (const [name, command] of Object.entries(scripts)) {
             if (/extensions\/copilot|compile-copilot|watch-copilot|copilot:setup|copilot:get_token/i.test(`${name} ${command}`)) {
               forbidden.push(`${name}: ${command}`);
@@ -79,6 +103,16 @@ jobs:
             process.exit(1);
           }
 
+          if (product.upstreamVersion !== pkg.version || product.upstreamVersion !== '1.133.0') {
+            console.error('Upstream Version must match the Code OSS package/API version (1.133.0).');
+            process.exit(1);
+          }
+
+          if (product.communityRelease !== '0.1.0-alpha') {
+            console.error('Community product version must be 0.1.0-alpha.');
+            process.exit(1);
+          }
+
           if (product.defaultChatAgent) {
             console.error('product.json must not configure defaultChatAgent / Copilot agent for Community Edition.');
             process.exit(1);
@@ -89,10 +123,26 @@ jobs:
             process.exit(1);
           }
 
-          // Ensure packaging exclude list still blocks copilot and includes pcl-community sources only via local packaging
-          const extensionsTs = fs.readFileSync('build/lib/extensions.ts', 'utf8');
-          if (!/excludedExtensions[\s\S]*'copilot'/.test(extensionsTs)) {
-            console.error("build/lib/extensions.ts must exclude 'copilot' from packaging.");
+          if (fs.existsSync('tools/pnp-community-cli')) {
+            console.error('The placeholder pnp CLI must not replace Public PNPSDK tooling.');
+            process.exit(1);
+          }
+
+          const pclExtension = JSON.parse(fs.readFileSync('extensions/pcl-community/package.json', 'utf8'));
+          if (!pclExtension.contributes?.jsonValidation?.some(item => item.fileMatch?.includes('plugin.json'))) {
+            console.error('pcl-community must register the Public PNPSDK plugin.json schema.');
+            process.exit(1);
+          }
+
+          const commonWorkbench = fs.readFileSync('src/vs/workbench/workbench.common.main.ts', 'utf8');
+          const sharedChat = fs.readFileSync('src/vs/workbench/contrib/chat/browser/chat.shared.contribution.ts', 'utf8');
+          const forbiddenUi = [
+            "./contrib/chat/browser/chat.view.js",
+            "./contrib/welcomeAgentSessions/browser/agentSessionsWelcome.contribution.js",
+            'registerWorkbenchContribution2(ChatStatusBarEntry.ID'
+          ];
+          if (forbiddenUi.some(marker => commonWorkbench.includes(marker) || sharedChat.includes(marker))) {
+            console.error('Community workbench re-enabled an Agent/Chat product surface.');
             process.exit(1);
           }
 
@@ -115,7 +165,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Run M1 e2e (build → sign → package → validate)
         shell: bash
@@ -129,8 +179,7 @@ jobs:
         with:
           name: hello-pcl-package
           path: |
-            fixtures/hello-pcl/dist/*.pnp
-            fixtures/hello-pcl/dist/**/*
+            fixtures/hello-pcl/bin/Release/net10.0/*.pnp
           if-no-files-found: error
 
   linux-build:

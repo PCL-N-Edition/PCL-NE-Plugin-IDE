@@ -100,7 +100,8 @@
 .monaco-workbench .part.editor > .content .editor-group-container > .editor-group-watermark-wrapper > .editor-group-watermark  {
 	display: flex;
 	height: 100%;
-	max-width: 272px;
+	/* Wider than letterpress so 2x logo is not clipped by the parent. */
+	max-width: 544px;
 	margin: auto;
 	flex-direction: column;
 	align-items: center;
@@ -122,31 +123,31 @@
 
 .monaco-workbench .part.editor > .content:not(.empty) .editor-group-container.empty > .editor-group-watermark-wrapper > .editor-group-watermark,
 .monaco-workbench .part.editor > .content.auxiliary .editor-group-container.empty > .editor-group-watermark-wrapper > .editor-group-watermark {
-	max-width: 200px;
+	max-width: 400px;
 	height: calc(100% - 70px);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .editor-group-watermark-wrapper .editor-group-watermark .letterpress {
-	width: 100%;
-	max-height: 100%;
+	/* Fixed 2x size (was 256px). */
+	width: 512px;
+	height: 512px;
+	max-width: 512px;
+	max-height: min(512px, 50vh);
 	aspect-ratio: 1/1;
-	background-image: url('./letterpress-light.svg');
+	flex: 0 0 auto;
+	/* Community Edition empty-editor mark (no background plate). */
+	background-image: url('./code-community-no-bg.png');
 	background-size: contain;
-	background-position-x: center;
+	background-position: center center;
 	background-repeat: no-repeat;
-	max-width: 256px;
+	opacity: 1;
 }
 
-.monaco-workbench.vs-dark .part.editor > .content .editor-group-container .editor-group-watermark .letterpress {
-	background-image: url('./letterpress-dark.svg');
-}
-
-.monaco-workbench.hc-light .part.editor > .content .editor-group-container .editor-group-watermark .letterpress {
-	background-image: url('./letterpress-hcLight.svg');
-}
-
+.monaco-workbench.vs-dark .part.editor > .content .editor-group-container .editor-group-watermark .letterpress,
+.monaco-workbench.hc-light .part.editor > .content .editor-group-container .editor-group-watermark .letterpress,
 .monaco-workbench.hc-black .part.editor > .content .editor-group-container .editor-group-watermark .letterpress {
-	background-image: url('./letterpress-hcDark.svg');
+	background-image: url('./code-community-no-bg.png');
+	opacity: 1;
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .editor-group-watermark-wrapper .editor-group-watermark .shortcuts {

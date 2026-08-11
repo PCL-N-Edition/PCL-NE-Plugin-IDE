@@ -5,11 +5,6 @@ on:
     tags:
       - 'community-v*'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag to create artifacts for (e.g. community-v0.1.0)'
-        required: false
-        default: ''
 
 permissions:
   contents: write
@@ -19,86 +14,165 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  validate-and-package:
-    name: Validate and package Community sources
+  validate-m1:
+    name: Validate M1 package
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version-file: .nvmrc
-
       - name: Setup .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
-      - name: Product identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          node -e "const p=require('./product.json'); console.log(p.nameLong); console.log(p.applicationName); if(!/community/i.test(p.nameLong)) process.exit(1)"
-
-      - name: M1 e2e package
+      - name: Run M1 end-to-end pipeline
         shell: bash
         run: |
           set -euo pipefail
           chmod +x scripts/pcl-m1-e2e.sh
           ./scripts/pcl-m1-e2e.sh
 
-      - name: Stage release notes
-        shell: bash
-        run: |
-          set -euo pipefail
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          mkdir -p .build/community-release
-          cp fixtures/hello-pcl/dist/com.pcln.hello-pcl-0.1.0.pnp .build/community-release/
-          cat > .build/community-release/RELEASE_NOTES.md <<EOF
-          # PCL NE Plugin IDE Community Edition ${TAG}
-
-          This release completes **M0 (fork baseline)** and **M1 (plugin project alpha)**.
-
-          ## Highlights
-
-          - Copilot extension and Copilot product packaging removed
-          - Built-in extension packaging trimmed for PCL-N plugin development
-          - New UI defaults: Dark 2026 / Light 2026 (+ High Contrast)
-          - \`pcl-community\` extension: project create, environment check, manifest schema, build/package/validate
-          - Reference CLI: \`tools/pnp-community-cli\`
-          - Hello PCL fixture e2e package attached
-
-          ## Verification
-
-          - Community boundary checks
-          - M1 fixture: build → development sign → package → validate
-
-          ## Notes
-
-          - Full multi-platform Electron installers remain under active pipeline work
-          - Chat/Agent host sources still exist for upstream sync cost control and are not productized (no defaultChatAgent)
-          - Full Roslyn language service distribution is tracked in ADR-002
-          EOF
-
-      - name: Upload release assets
+      - name: Upload verified PCL package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: community-release-assets
-          path: .build/community-release/**
+          name: hello-pcl-package
+          path: fixtures/hello-pcl/bin/Release/net10.0/com.pcln.hello-pcl-0.1.0.pnp
+          if-no-files-found: error
+
+  windows-x64:
+    name: Build Windows x64 release
+    needs: validate-m1
+    runs-on: windows-2025
+    timeout-minutes: 120
+    env:
+      npm_config_arch: x64
+      VSCODE_ARCH: x64
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          lfs: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install build dependencies
+        working-directory: build
+        run: npm ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install product dependencies
+        run: npm ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Typecheck build scripts
+        working-directory: build
+        run: npm run typecheck
+
+      - name: Build portable Community application
+        run: npm run gulp vscode-win32-x64
+
+      - name: Verify packaged Community boundaries
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $application = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'VSCode-win32-x64'
+          $appRoot = Join-Path $application 'resources\app'
+          $package = Get-Content -LiteralPath (Join-Path $appRoot 'package.json') -Raw | ConvertFrom-Json
+          $product = Get-Content -LiteralPath (Join-Path $appRoot 'product.json') -Raw | ConvertFrom-Json
+
+          if ($package.version -ne '1.133.0' -or $product.upstreamVersion -ne $package.version) {
+            throw "Packaged Upstream Version mismatch: package=$($package.version), upstream=$($product.upstreamVersion)"
+          }
+          if ($product.communityRelease -ne '0.1.0-alpha') {
+            throw "Packaged Community Version mismatch: $($product.communityRelease)"
+          }
+          $executableVersion = (Get-Item -LiteralPath (Join-Path $application 'PCL NE Plugin IDE.exe')).VersionInfo
+          if ($executableVersion.ProductVersion -ne $product.communityRelease -or $executableVersion.FileVersion -ne $package.version) {
+            throw "Executable version metadata mismatch: product=$($executableVersion.ProductVersion), file=$($executableVersion.FileVersion)"
+          }
+
+          $expectedExtensions = @(
+            'configuration-editing', 'csharp', 'debug-auto-launch', 'debug-server-ready',
+            'diff', 'dotenv', 'git', 'git-base', 'ini', 'json', 'json-language-features',
+            'log', 'markdown-basics', 'markdown-language-features', 'media-preview',
+            'merge-conflict', 'pcl-community', 'powershell', 'references-view',
+            'search-result', 'shellscript', 'terminal-suggest', 'theme-defaults',
+            'theme-modern-icons', 'xml', 'yaml'
+          ) | Sort-Object
+          $actualExtensions = Get-ChildItem -LiteralPath (Join-Path $appRoot 'extensions') -Directory |
+            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'package.json') } |
+            Select-Object -ExpandProperty Name |
+            Sort-Object
+          if (Compare-Object -ReferenceObject $expectedExtensions -DifferenceObject $actualExtensions) {
+            throw "Packaged built-in extension set does not match the Community allowlist: $($actualExtensions -join ', ')"
+          }
+
+          foreach ($dependency in '@github/copilot', '@github/copilot-sdk', '@vscode/copilot-api') {
+            if ($package.dependencies.PSObject.Properties.Name -contains $dependency) {
+              throw "Forbidden production dependency in packaged application: $dependency"
+            }
+          }
+          if (Test-Path -LiteralPath (Join-Path $appRoot 'extensions\copilot')) {
+            throw 'Packaged application still contains the Copilot extension.'
+          }
+          Write-Host 'Packaged Community boundaries passed.'
+
+      - name: Download verified PCL package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hello-pcl-package
+          path: .build/community-release
+
+      - name: Package and hash release assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $application = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'VSCode-win32-x64'
+          $release = Join-Path $env:GITHUB_WORKSPACE '.build/community-release'
+          $archive = Join-Path $release 'PCL-NE-Plugin-IDE-Community-0.1.0-alpha-win32-x64.zip'
+          if (-not (Test-Path -LiteralPath (Join-Path $application 'PCL NE Plugin IDE.exe'))) {
+            throw "Community executable missing from $application"
+          }
+          New-Item -ItemType Directory -Path $release -Force | Out-Null
+          Compress-Archive -Path (Join-Path $application '*') -DestinationPath $archive -CompressionLevel Optimal
+          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $([IO.Path]::GetFileName($archive))" | Set-Content -LiteralPath "$archive.sha256" -Encoding ascii
+          Copy-Item -LiteralPath 'docs/releases/community-v0.1.0-alpha.md' -Destination (Join-Path $release 'RELEASE_NOTES.md')
+
+      - name: Upload Windows release assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: community-windows-x64
+          path: |
+            .build/community-release/PCL-NE-Plugin-IDE-Community-0.1.0-alpha-win32-x64.zip
+            .build/community-release/PCL-NE-Plugin-IDE-Community-0.1.0-alpha-win32-x64.zip.sha256
+            .build/community-release/com.pcln.hello-pcl-0.1.0.pnp
+            .build/community-release/RELEASE_NOTES.md
+          if-no-files-found: error
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/community-v')
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: |
+            .build/community-release/PCL-NE-Plugin-IDE-Community-0.1.0-alpha-win32-x64.zip
+            .build/community-release/PCL-NE-Plugin-IDE-Community-0.1.0-alpha-win32-x64.zip.sha256
             .build/community-release/com.pcln.hello-pcl-0.1.0.pnp
-            .build/community-release/RELEASE_NOTES.md
           body_path: .build/community-release/RELEASE_NOTES.md
           generate_release_notes: true
           draft: false
           prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

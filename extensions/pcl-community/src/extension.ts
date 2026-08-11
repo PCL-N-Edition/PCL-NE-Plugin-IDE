@@ -4,57 +4,75 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { runPclCli, PclTask } from './cli';
+import { PclTask, runPclTask } from './cli';
+import { CSharpLanguageService } from './csharpLanguageServer';
 import { PclDiagnosticController } from './diagnostics';
 import { checkEnvironment, formatEnvironmentReport } from './environment';
+import { findNplugInDirectory } from './nplug';
+import { openPluginProject } from './openProject';
 import { tryLoadProjects } from './project';
+import { PclTaskProvider } from './tasks';
 import { createHelloPclProject, promptCreateProject } from './template';
 
-let output: vscode.OutputChannel;
+let output: vscode.LogOutputChannel;
 let diagnostics: PclDiagnosticController;
+let csharp: CSharpLanguageService;
 const isPluginWorkspace = 'pcl.community.isPluginWorkspace';
+
+function getSdkVersion(): string {
+	return vscode.workspace.getConfiguration('pcl.community').get<string>('sdkVersion') || '0.2.5';
+}
 
 function refreshContextAndDiagnostics(): void {
 	const projects = tryLoadProjects(vscode.workspace.workspaceFolders);
-	void vscode.commands.executeCommand('setContext', isPluginWorkspace, projects.length > 0);
+	const hasNplug = (vscode.workspace.workspaceFolders ?? []).some(folder =>
+		!!findNplugInDirectory(folder.uri.fsPath));
+	void vscode.commands.executeCommand('setContext', isPluginWorkspace, projects.length > 0 || hasNplug);
 	diagnostics.refreshManifestProjects(projects);
+	if (projects.length > 0 || hasNplug) {
+		void csharp.ensureStarted(false).catch(error => output.appendLine(String(error)));
+	}
 }
 
 async function pickProjectRoot(): Promise<string | undefined> {
 	const projects = tryLoadProjects(vscode.workspace.workspaceFolders);
 	if (!projects.length) {
-		void vscode.window.showErrorMessage('No plugin.manifest.json found in the workspace.');
+		const folders = vscode.workspace.workspaceFolders;
+		if (folders?.length === 1 && findNplugInDirectory(folders[0].uri.fsPath)) {
+			return folders[0].uri.fsPath;
+		}
+		void vscode.window.showErrorMessage(vscode.l10n.t('No PCL plugin project found (expected plugin.json and a .csproj).'));
 		return undefined;
 	}
 	if (projects.length === 1) {
 		return projects[0].root;
 	}
 	const picked = await vscode.window.showQuickPick(
-		projects.map(p => ({
-			label: p.manifest.name,
-			description: p.manifest.id,
-			detail: p.root,
-			root: p.root,
+		projects.map(project => ({
+			label: project.manifest.name,
+			description: project.manifest.id,
+			detail: project.root,
+			root: project.root,
 		})),
-		{ placeHolder: 'Select a PCL plugin project' },
+		{ placeHolder: vscode.l10n.t('Select a PCL plugin project') },
 	);
 	return picked?.root;
 }
 
-async function runTask(extensionPath: string, task: PclTask, successMessage: string): Promise<void> {
+async function runTask(task: PclTask, successMessage: string): Promise<void> {
 	const projectRoot = await pickProjectRoot();
 	if (!projectRoot) {
 		return;
 	}
-
 	output.show(true);
 	try {
-		const result = await runPclCli(extensionPath, task, projectRoot, output);
-		diagnostics.applyCliOutput(projectRoot, `${result.stdout}\n${result.stderr}`);
+		const result = await runPclTask(task, projectRoot, output);
+		diagnostics.applyBuildOutput(projectRoot, `${result.stdout}\n${result.stderr}`);
 		if (result.exitCode === 0) {
-			void vscode.window.showInformationMessage(successMessage);
+			const detail = result.packagePath ? ` ${result.packagePath}` : '';
+			void vscode.window.showInformationMessage(`${successMessage}${detail}`);
 		} else {
-			void vscode.window.showErrorMessage(`PCL ${task} failed (exit ${result.exitCode}). See PCL Community output.`);
+			void vscode.window.showErrorMessage(vscode.l10n.t('PCL {0} failed with exit code {1}. See PCL Community output.', task, result.exitCode));
 		}
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
@@ -64,66 +82,73 @@ async function runTask(extensionPath: string, task: PclTask, successMessage: str
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-	output = vscode.window.createOutputChannel('PCL Community');
+	output = vscode.window.createOutputChannel('PCL Community', { log: true });
 	diagnostics = new PclDiagnosticController();
-
-	context.subscriptions.push(output, diagnostics);
+	csharp = new CSharpLanguageService(context, output);
+	context.subscriptions.push(output, diagnostics, csharp);
 
 	context.subscriptions.push(
+		vscode.commands.registerCommand('pcl.community.openProject', () => openPluginProject(getSdkVersion())),
 		vscode.commands.registerCommand('pcl.community.createProject', async () => {
-			const sdkVersion = vscode.workspace.getConfiguration('pcl.community').get<string>('sdkVersion') || '0.1.0';
-			const options = await promptCreateProject(sdkVersion);
+			const options = await promptCreateProject(getSdkVersion());
 			if (!options) {
 				return;
 			}
 			try {
 				const dir = await createHelloPclProject(options);
-				refreshContextAndDiagnostics();
 				const open = await vscode.window.showInformationMessage(
-					`Created plugin project at ${dir}`,
-					'Open Folder',
+					vscode.l10n.t('Created plugin project at {0}', dir),
+					vscode.l10n.t('Open Project'),
 				);
-				if (open === 'Open Folder') {
-					await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(dir), true);
+				if (open === vscode.l10n.t('Open Project')) {
+					await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(dir), false);
 				}
 			} catch (error) {
 				void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
 			}
 		}),
-		vscode.commands.registerCommand('pcl.community.checkEnvironment', async () => {
-			const checks = checkEnvironment(context.extensionPath);
-			const report = formatEnvironmentReport(checks);
+		vscode.commands.registerCommand('pcl.community.newFile', () =>
+			vscode.commands.executeCommand('workbench.action.files.newUntitledFile')),
+		vscode.commands.registerCommand('pcl.community.checkEnvironment', () => {
+			const checks = checkEnvironment(context.globalStorageUri.fsPath);
 			output.clear();
-			output.appendLine(report);
+			output.appendLine(formatEnvironmentReport(checks));
 			output.show(true);
-			if (checks.every(c => c.ok)) {
-				void vscode.window.showInformationMessage('PCL environment checks passed.');
-			} else {
-				void vscode.window.showWarningMessage('PCL environment has issues. See PCL Community output.');
+			const message = checks.every(check => check.ok)
+				? vscode.l10n.t('PCL environment checks passed.')
+				: vscode.l10n.t('PCL environment has issues. See PCL Community output.');
+			void vscode.window.showInformationMessage(message);
+		}),
+		vscode.commands.registerCommand('pcl.community.installCsharpLanguageServer', async () => {
+			try {
+				await csharp.installOrUpdate();
+				await csharp.ensureStarted(true);
+				void vscode.window.showInformationMessage(vscode.l10n.t('C# language server is ready.'));
+			} catch (error) {
+				void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
 			}
 		}),
+		vscode.commands.registerCommand('pcl.community.restore', () =>
+			runTask('restore', vscode.l10n.t('Plugin dependencies restored.'))),
 		vscode.commands.registerCommand('pcl.community.build', () =>
-			runTask(context.extensionPath, 'build', 'Plugin build completed.')),
+			runTask('build', vscode.l10n.t('Plugin build completed.'))),
 		vscode.commands.registerCommand('pcl.community.package', () =>
-			runTask(context.extensionPath, 'package', 'Plugin package (.pnp) created.')),
+			runTask('package', vscode.l10n.t('Development-signed plugin package created:'))),
 		vscode.commands.registerCommand('pcl.community.validate', () =>
-			runTask(context.extensionPath, 'validate', 'Plugin package validation passed.')),
+			runTask('validate', vscode.l10n.t('Plugin package validation passed:'))),
 		vscode.commands.registerCommand('pcl.community.developmentSign', () =>
-			runTask(context.extensionPath, 'sign', 'Development signature applied.')),
-	);
-
-	context.subscriptions.push(
-		vscode.workspace.onDidChangeWorkspaceFolders(() => refreshContextAndDiagnostics()),
-		vscode.workspace.onDidSaveTextDocument(doc => {
-			if (doc.fileName.endsWith('plugin.manifest.json')) {
+			runTask('sign', vscode.l10n.t('Development-signed plugin package created:'))),
+		vscode.tasks.registerTaskProvider('pcl', new PclTaskProvider()),
+		vscode.workspace.onDidChangeWorkspaceFolders(refreshContextAndDiagnostics),
+		vscode.workspace.onDidSaveTextDocument(document => {
+			if (document.fileName.endsWith('plugin.json') || document.fileName.endsWith('.nplug')) {
 				refreshContextAndDiagnostics();
 			}
 		}),
 	);
-
 	refreshContextAndDiagnostics();
 }
 
 export function deactivate(): void {
-	// disposables cleaned via context.subscriptions
+	// Disposables are owned by the extension context.
 }

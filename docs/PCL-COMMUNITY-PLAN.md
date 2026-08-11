@@ -1,6 +1,6 @@
 # PCL NE Plugin IDE Community Edition — 基本规划
 
-> 状态：初始规划；基线：`main`（2026-08-09）；适用范围：本仓库发布的 Community Edition
+> 状态：M0–M1 已实现；基线：Code - OSS 1.133（2026-08-11）；适用范围：本仓库发布的 Community Edition
 
 ## 1. 规划结论
 
@@ -49,16 +49,16 @@ Community Edition 应当是独立可用的基础开发环境，不以编辑器�
 | Debug UI、Testing UI | 已继承 | 完整 | PCL-N 适配器仍需实现 |
 | Community 产品标识 | 基础完成 | 完整 | `product.json` 已设置产品名、应用 ID 与协议 |
 | 仓库与 Edition 边界 | 基础完成 | 完整 | 已有公开边界文档和 Community CI 基线 |
-| 内置扩展裁剪 | 已落地（停打包） | 精简可维护 | 见 `docs/PCL-TRIM-LIST.md`；Copilot 源码已删除，其余先停打包 |
-| C# / Roslyn | 语法 + dotnet build | 完整 | M1 使用 grammar + CLI 构建诊断；完整 LS 见 ADR-002 |
+| 内置扩展裁剪 | 已落地（26 项 allowlist） | 精简可维护 | 见 `docs/PCL-TRIM-LIST.md`；Copilot 扩展、Agent/Chat 产品入口均已移除 |
+| C# / Roslyn | 已实现（M1） | 完整 | C# grammar + 固定版本 `csharp-ls 0.26.0` + PNPSDK Analyzer |
 | PCL-N 项目与模板 | 已实现（M1） | 完整 | `extensions/pcl-community` + Hello PCL 模板 |
-| Public PNPSDK / Analyzer | 参考 CLI 已实现 | 完整 | `tools/pnp-community-cli`；正式包分发见 ADR-001 |
+| Public PNPSDK / Analyzer | 已实现（0.2.5） | 完整 | 真实 NuGet/MSBuild 构建、Analyzer、开发签名与 `.pnp` 输出 |
 | Manifest / AXAML / 本地化工具 | Manifest 已实现 | 完整 | Manifest schema/校验已完成；AXAML 设计器属 M3 |
 | `.pnp` 构建、签名与校验 | 已实现（开发签名） | 完整 | build/sign/package/validate + fixture e2e |
 | Sidecar Standard 集成 | 未实现 | 完整 | 仅接入公开 Standard 能力 |
 | PCL-N 安装、运行、调试与日志 | 未实现 | 完整 | 应通过公共协议和 Debug Adapter 接入 |
 | PCL Extension Registry | 未实现 | 完整 | 只使用公开发布接口和 Community 身份 |
-| Community 安装包与更新 | 基础设施待完善 | 完整 | 需建立独立发行通道和升级验证 |
+| Community 安装包与更新 | Windows Alpha 制品 | 完整 | 标签触发 Windows x64 ZIP、SHA-256 与 GitHub Release；安装器/自动更新仍属 M4 |
 
 状态判断依据是仓库内当前可见实现；当外部 SDK、Sidecar 或 Registry 仓库接入后应重新评估。
 
@@ -100,7 +100,7 @@ Community Edition 应当是独立可用的基础开发环境，不以编辑器�
 |---|---|---|
 | PCL Projects | 项目识别、模板、工作区、SDK 版本解析 | 内置扩展 |
 | PCL Authoring | Manifest、AXAML、本地化编辑与校验 | 内置扩展 + Language Server / Custom Editor |
-| PCL Build | restore、build、开发签名、`.pnp` 打包与校验 | 内置扩展 + 公共 CLI |
+| PCL Build | restore、build、开发签名、`.pnp` 打包与校验 | 内置扩展 + Public PNPSDK MSBuild targets |
 | PCL Runtime | Sidecar Standard、安装/重载、生命周期、日志 | 内置扩展 + 公共协议客户端 |
 | PCL Debug | 启动配置、断点会话、诊断映射 | Debug Adapter / 内置扩展 |
 | PCL Welcome | 新手引导、环境检查、样例和文档入口 | 内置扩展 |
@@ -132,10 +132,10 @@ Community Edition 应当是独立可用的基础开发环境，不以编辑器�
 
 - [x] 项目模板与项目识别（`extensions/pcl-community`）；
 - [x] .NET / PNPSDK 环境检测和版本诊断；
-- [x] C# 语法高亮 + `dotnet build` 诊断（完整 Roslyn LS 见 ADR-002 后续）；
+- [x] C# 语法高亮 + 固定版本 `csharp-ls 0.26.0` Roslyn 语言服务；
 - [x] Manifest schema、补全和验证；
 - [x] PNPSDK Analyzer 诊断接入 Problems；
-- [x] build、development sign、package、validate 任务（`tools/pnp-community-cli`）；
+- [x] Public PNPSDK 0.2.5 的 restore、build、development sign、package、validate 任务；
 - [x] 一个最小插件 fixture 和端到端测试（`fixtures/hello-pcl` + `scripts/pcl-m1-e2e.*`）。
 
 退出条件：全新环境中的开发者可从模板创建插件并得到通过校验的 `.pnp` 制品，无需手工拼接命令。
@@ -184,10 +184,10 @@ Community Edition 应当是独立可用的基础开发环境，不以编辑器�
 
 在引入完整设计器之前，先实现一个能持续扩展的最小闭环：
 
-1. 冻结最小公开契约：Manifest schema、PNPSDK 版本、`.pnp` CLI 命令和 Sidecar Standard 最低版本；
+1. 冻结最小公开契约：Manifest schema、PNPSDK 版本、`.pnp` MSBuild 输出和 Sidecar Standard 最低版本；
 2. 建立一个 PCL 内置扩展骨架，完成项目识别、环境检查和命令注册；
 3. 加入 `Hello PCL` fixture，提供创建、build、package、validate 任务；
-4. 把 CLI / Analyzer 的结构化诊断映射到 Problems；
+4. 把 `dotnet` / Analyzer 的结构化诊断映射到 Problems；
 5. 在 CI 中运行该 fixture 的端到端构建，并检查制品不包含私有模块和凭据；
 6. 再以同一个 fixture 接入 Fake Sidecar，完成安装、启动、日志和重载。
 

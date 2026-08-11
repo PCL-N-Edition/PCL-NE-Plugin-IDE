@@ -5,6 +5,10 @@
 	"dataFolderName": ".pcl-ne-plugin-ide-community",
 	"sharedDataFolderName": ".pcl-ne-plugin-ide-community-shared",
 	"win32MutexName": "pclnepluginidecommunity",
+	"quality": "community",
+	"communityRelease": "0.1.0-alpha",
+	"upstreamVersion": "1.133.0",
+	"embedderIdentifier": "pcln-plugin-ide-community",
 	"licenseName": "MIT",
 	"licenseUrl": "https://github.com/PCL-N-Edition/PCL-NE-Plugin-IDE/blob/main/LICENSE.txt",
 	"serverLicenseUrl": "https://github.com/PCL-N-Edition/PCL-NE-Plugin-IDE/blob/main/LICENSE.txt",
@@ -14,6 +18,12 @@
 	"serverApplicationName": "pcl-ne-plugin-ide-server",
 	"serverDataFolderName": ".pcl-ne-plugin-ide-server",
 	"tunnelApplicationName": "pcl-ne-plugin-ide-tunnel",
+	"documentationUrl": "https://docs.pcln.top/plugin-sdk/",
+	"releaseNotesUrl": "https://github.com/PCL-N-Edition/PCL-NE-Plugin-IDE/releases",
+	"requestFeatureUrl": "https://github.com/PCL-N-Edition/PCL-NE-Plugin-IDE/issues/new/choose",
+	"keyboardShortcutsUrlWin": "",
+	"keyboardShortcutsUrlMac": "",
+	"keyboardShortcutsUrlLinux": "",
 	"win32DirName": "PCL NE Plugin IDE Community Edition",
 	"win32NameVersion": "PCL NE Plugin IDE Community Edition",
 	"win32RegValueName": "PCLNEPluginIDECommunity",
@@ -35,6 +45,7 @@
 	"electronArtifactFeed": "",
 	"urlProtocol": "pcl-ne-plugin-ide",
 	"builtInExtensions": [],
+	"builtInExtensionsEnabledWithAutoUpdates": [],
 	"onboardingKeymaps": [
 		{
 			"id": "vscode",
@@ -54,18 +65,6 @@
 			"label": "Light 2026",
 			"themeId": "Light 2026",
 			"type": "light"
-		},
-		{
-			"id": "hc-dark",
-			"label": "Dark High Contrast",
-			"themeId": "Default High Contrast",
-			"type": "hcDark"
-		},
-		{
-			"id": "hc-light",
-			"label": "Light High Contrast",
-			"themeId": "Default High Contrast Light",
-			"type": "hcLight"
 		}
 	],
 	"linkProtectionTrustedDomains": [
@@ -78,6 +77,5 @@
 		"usage": false
 	},
 	"enableTelemetry": false,
-	"showTelemetryOptOut": false,
-	"sessionsWindowAllowedExtensions": []
+	"showTelemetryOptOut": false
 }

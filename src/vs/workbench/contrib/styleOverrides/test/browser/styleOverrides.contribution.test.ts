@@ -79,7 +79,7 @@ suite('StyleOverridesContribution', () => {
 
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('applies startup values without relayout and relayouts once when toggled', async () => {
+	test('keeps Community Modern UI enabled when a legacy setting changes', async () => {
 		const configurationService = new TestConfigurationService({ [LayoutSettings.MODERN_UI]: true });
 		store.add(configurationService.onDidChangeConfigurationEmitter);
 		const layoutService = new StyleOverridesTestLayoutService();
@@ -137,18 +137,18 @@ suite('StyleOverridesContribution', () => {
 				paneHeaderInlineLineHeight: '',
 				layoutCount: 0,
 			},
-			mainEnabledAfterToggle: false,
-			mainTabsEnabledAfterToggle: false,
-			auxiliaryEnabledAfterToggle: false,
-			auxiliaryTabsEnabledAfterToggle: false,
-			paneHeaderSizeAfterToggle: 22,
-			paneHeaderLineHeightAfterToggle: '22px',
+			mainEnabledAfterToggle: true,
+			mainTabsEnabledAfterToggle: true,
+			auxiliaryEnabledAfterToggle: true,
+			auxiliaryTabsEnabledAfterToggle: true,
+			paneHeaderSizeAfterToggle: 28,
+			paneHeaderLineHeightAfterToggle: '28px',
 			paneHeaderInlineLineHeightAfterToggle: '',
-			layoutCountAfterToggle: 1,
+			layoutCountAfterToggle: 0,
 		});
 	});
 
-	test('pane composite actions fill regular and Agents headers', () => {
+	test('pane composite actions fill regular headers', () => {
 		const regularRoot = document.createElement('div');
 		regularRoot.className = 'monaco-workbench style-override modern-ui-tabs';
 		document.body.appendChild(regularRoot);
@@ -156,23 +156,13 @@ suite('StyleOverridesContribution', () => {
 		// Taller container than the fixed 32px override, so the override is verified rather than a 100% fallback.
 		const regular = createCompositeAction(regularRoot, 40, true);
 
-		const agentsRoot = document.createElement('div');
-		agentsRoot.className = 'monaco-workbench modern-ui-tabs';
-		document.body.appendChild(agentsRoot);
-		store.add(toDisposable(() => agentsRoot.remove()));
-		const agents = createCompositeAction(agentsRoot, 35, false);
-
-		const targetWindow = getWindow(agents.actionItem);
+		const targetWindow = getWindow(regular.actionItem);
 		assert.deepStrictEqual({
 			regularTargetHeight: targetWindow.getComputedStyle(regular.actionItem).height,
 			regularIndicatorHeight: targetWindow.getComputedStyle(regular.indicator).height,
-			agentsTargetHeight: targetWindow.getComputedStyle(agents.actionItem).height,
-			agentsIndicatorHeight: targetWindow.getComputedStyle(agents.indicator).height,
 		}, {
 			regularTargetHeight: '32px',
 			regularIndicatorHeight: '24px',
-			agentsTargetHeight: '35px',
-			agentsIndicatorHeight: '24px',
 		});
 	});
 

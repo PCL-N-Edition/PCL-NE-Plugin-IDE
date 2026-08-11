@@ -71,6 +71,21 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Add Windows SDK tools to PATH
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+          $sdkBinRoot = Join-Path $programFilesX86 'Windows Kits\10\bin'
+          $signtool = Get-ChildItem -Path (Join-Path $sdkBinRoot '*\x64\signtool.exe') -File |
+            Sort-Object -Property FullName -Descending |
+            Select-Object -First 1
+          if (-not $signtool) {
+            throw "signtool.exe was not found under $sdkBinRoot"
+          }
+          $signtool.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          Write-Host "Using Windows SDK tools from $($signtool.DirectoryName)"
+
       - name: Install build dependencies
         working-directory: build
         run: npm ci
@@ -87,7 +102,10 @@ jobs:
         run: npm run typecheck
 
       - name: Build portable Community application
-        run: npm run gulp vscode-win32-x64
+        shell: pwsh
+        run: |
+          Get-Command signtool.exe -ErrorAction Stop
+          npm run gulp vscode-win32-x64
 
       - name: Verify packaged Community boundaries
         shell: pwsh
